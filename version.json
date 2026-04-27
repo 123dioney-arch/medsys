@@ -1,0 +1,12 @@
+{
+  "version": "17.0.0",
+  "fecha": "2026-04-26",
+  "url": "https://raw.githubusercontent.com/123dioney-arch/medsys/main/index.html",
+  "notas": [
+    "🖼️ Historia Clínica: sube imágenes y documentos de laboratorio directamente",
+    "📂 Arrastra o selecciona: JPG, PNG, PDF (máx 10 MB)",
+    "🗂️ Galería con filtros por categoría (Lab, Rx, Eco, Foto)",
+    "🔍 Visor de imágenes y PDFs integrado"
+  ],
+  "critica": false
+}
