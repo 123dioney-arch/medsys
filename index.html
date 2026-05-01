@@ -325,6 +325,24 @@ input:checked+.togsl:before{transform:translateX(20px)}
 .alergia-wrap{display:flex;flex-direction:column;gap:5px}
 .alergia-otro{display:none;animation:fi .15s ease}
 
+/* ── IA ANÁLISIS RX ── */
+#ia-panel{background:rgba(46,168,224,.06);border:1px solid rgba(46,168,224,.25);border-radius:12px;padding:16px;margin-top:12px;display:none}
+#ia-panel.show{display:block}
+.ia-loading{display:flex;align-items:center;gap:10px;color:var(--ac);font-size:13px}
+.ia-dots span{animation:blink 1.2s infinite;font-size:18px}
+.ia-dots span:nth-child(2){animation-delay:.2s}
+.ia-dots span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:0}40%{opacity:1}}
+.ia-resultado{font-size:13px;line-height:1.8;color:var(--tx)}
+.ia-seccion{font-size:11px;font-weight:700;color:var(--ac);letter-spacing:.5px;text-transform:uppercase;margin:12px 0 4px;border-left:3px solid var(--ac);padding-left:8px}
+.ia-warning{font-size:11px;color:var(--am);background:rgba(227,161,63,.08);border:1px solid rgba(227,161,63,.2);border-radius:6px;padding:7px 10px;margin-top:10px}
+/* ── REGISTRO INICIAL ── */
+#reg-screen{position:fixed;inset:0;background:var(--bg);z-index:9998;display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+#reg-screen.open{display:flex}
+#reg-box{background:var(--sf);border:1px solid var(--bd);border-radius:20px;padding:36px 32px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.reg-logo{font-size:40px;text-align:center;margin-bottom:8px}
+.reg-title{font-size:20px;font-weight:800;text-align:center;margin-bottom:4px}
+.reg-sub{font-size:12px;color:var(--so);text-align:center;margin-bottom:24px}
 /* ── ARCHIVOS / GALERÍA ── */
 .arch-card{background:var(--sf);border:1px solid var(--bd);border-radius:10px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative}
 .arch-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.4)}
@@ -373,20 +391,65 @@ input:checked+.togsl:before{transform:translateX(20px)}
 
 #login-screen{
   position:fixed;inset:0;background:var(--bg);z-index:9999;
-  display:flex;align-items:center;justify-content:center;padding:20px;
+  display:flex;align-items:stretch;justify-content:center;
 }
-#login-box{
-  background:var(--sf);border:1px solid var(--bd);border-radius:20px;
-  padding:36px 32px;width:100%;max-width:380px;
-  box-shadow:0 20px 60px rgba(0,0,0,.5);
+/* Pantalla dividida */
+#auth-container{
+  display:flex;width:100%;max-width:960px;margin:auto;
+  background:var(--sf);border-radius:24px;overflow:hidden;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+  min-height:560px;max-height:96vh;
 }
-.login-logo{font-size:36px;text-align:center;margin-bottom:6px}
-.login-title{font-size:20px;font-weight:800;color:var(--tx);text-align:center;letter-spacing:-.4px}
-.login-sub{font-size:12px;color:var(--so);text-align:center;margin-bottom:28px}
+/* Panel izquierdo — hero */
+#auth-hero{
+  flex:1;background:linear-gradient(145deg,#0D1117 0%,#161B22 50%,#1a2744 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:40px 32px;position:relative;overflow:hidden;
+}
+#auth-hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 30% 50%,rgba(46,168,224,.12) 0%,transparent 70%);
+}
+.hero-logo{font-size:56px;margin-bottom:16px;position:relative}
+.hero-title{font-size:26px;font-weight:800;color:var(--tx);text-align:center;line-height:1.2;position:relative}
+.hero-sub{font-size:13px;color:var(--so);text-align:center;margin-top:10px;line-height:1.7;position:relative;max-width:260px}
+.hero-features{margin-top:28px;display:flex;flex-direction:column;gap:10px;position:relative;width:100%}
+.hero-feat{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--so);background:rgba(255,255,255,.04);border-radius:8px;padding:8px 12px}
+.hero-feat span:first-child{font-size:16px;flex-shrink:0}
+/* Panel derecho — formularios */
+#auth-forms{
+  width:380px;flex-shrink:0;display:flex;flex-direction:column;
+  overflow-y:auto;background:var(--sf);
+}
+/* Tabs login/registro */
+.auth-tabs{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0}
+.auth-tab{flex:1;padding:18px;text-align:center;font-size:14px;font-weight:700;
+  cursor:pointer;color:var(--so);transition:all .18s;border-bottom:3px solid transparent}
+.auth-tab.active{color:var(--ac);border-bottom-color:var(--ac);background:rgba(46,168,224,.04)}
+.auth-tab:hover:not(.active){color:var(--tx);background:rgba(255,255,255,.03)}
+/* Formularios */
+.auth-form{padding:28px;display:none;flex-direction:column;gap:0;flex:1}
+.auth-form.active{display:flex}
+.auth-form .inp{background:var(--card);margin-bottom:11px}
+.auth-form .lbl{font-size:11px;font-weight:700;color:var(--so);letter-spacing:.4px;text-transform:uppercase;display:block;margin-bottom:4px}
+.auth-btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:14px;font-weight:700;
+  cursor:pointer;font-family:inherit;transition:opacity .15s;margin-top:6px}
+.auth-btn-login{background:var(--ac);color:#fff}
+.auth-btn-reg{background:var(--ac2);color:#fff}
+.auth-btn:hover{opacity:.88}
+.auth-err{background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.4);
+  border-radius:8px;padding:9px 13px;font-size:12px;color:var(--rd);margin-bottom:12px;display:none}
+.auth-footer{font-size:11px;color:var(--mu);text-align:center;margin-top:14px}
+/* Responsive móvil */
+@media(max-width:680px){
+  #auth-hero{display:none}
+  #auth-forms{width:100%;border-radius:0}
+  #auth-container{border-radius:0;max-height:100vh;height:100%}
+  #login-screen{align-items:stretch}
+}
 .login-err{background:rgba(248,81,73,.12);border:1px solid rgba(248,81,73,.4);
   border-radius:8px;padding:9px 13px;font-size:12px;color:var(--rd);
   margin-bottom:14px;display:none}
-#login-box .inp{background:var(--card);margin-bottom:11px}
 .login-btn{width:100%;padding:11px;background:var(--ac);color:#fff;border:none;
   border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
   transition:opacity .15s;margin-top:4px}
@@ -437,23 +500,113 @@ input:checked+.togsl:before{transform:translateX(20px)}
   </div>
 </div>
 
-<!-- ══════════════ PANTALLA DE LOGIN ══════════════ -->
+<!-- ══════════════ PANTALLA UNIFICADA LOGIN + REGISTRO ══════════════ -->
 <div id="login-screen">
-  <div id="login-box">
-    <div class="login-logo">🏥</div>
-    <div class="login-title">MedSys COFEPRIS</div>
-    <div class="login-sub">Sistema Médico Integral · Acceso seguro</div>
-    <div class="login-err" id="login-err">Usuario o contraseña incorrectos.</div>
-    <label class="lbl">Usuario</label>
-    <input class="inp" id="login-user" type="text" placeholder="Tu usuario" autocomplete="username"
-      onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
-    <label class="lbl">Contraseña</label>
-    <input class="inp" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
-      onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" onclick="doLogin()">Iniciar sesión →</button>
-    <div class="login-footer">v8 · GPC CENETEC · NOM-024-SSA3</div>
-  </div>
-</div>
+  <div id="auth-container">
+
+    <!-- Panel izquierdo — Hero -->
+    <div id="auth-hero">
+      <div class="hero-logo">🏥</div>
+      <div class="hero-title">MedSys COFEPRIS</div>
+      <div class="hero-sub">Sistema Médico Integral · GPC CENETEC · NOM-024-SSA3</div>
+      <div class="hero-features">
+        <div class="hero-feat"><span>📋</span><span>Historia Clínica por especialidad</span></div>
+        <div class="hero-feat"><span>💊</span><span>Receta médica oficial COFEPRIS</span></div>
+        <div class="hero-feat"><span>🗂️</span><span>Expediente clínico digital</span></div>
+        <div class="hero-feat"><span>👶</span><span>Curvas OMS y scores pediátricos</span></div>
+        <div class="hero-feat"><span>🤖</span><span>Análisis IA de imágenes Rx</span></div>
+        <div class="hero-feat"><span>📲</span><span>Instalable · Funciona sin internet</span></div>
+      </div>
+    </div>
+
+    <!-- Panel derecho — Formularios -->
+    <div id="auth-forms">
+
+      <!-- Tabs -->
+      <div class="auth-tabs">
+        <div class="auth-tab active" id="tab-login" onclick="authTab('login')">🔐 Iniciar sesión</div>
+        <div class="auth-tab" id="tab-registro" onclick="authTab('registro')">✨ Registrarse</div>
+      </div>
+
+      <!-- ── FORMULARIO LOGIN ── -->
+      <div class="auth-form active" id="form-login">
+        <div style="margin-bottom:20px">
+          <div style="font-size:18px;font-weight:800;color:var(--tx)">Bienvenido de regreso</div>
+          <div style="font-size:12px;color:var(--so);margin-top:3px">Ingresa tus credenciales para continuar</div>
+        </div>
+        <div class="auth-err" id="login-err">Usuario o contraseña incorrectos.</div>
+        <label class="lbl">Usuario</label>
+        <input class="inp" id="login-user" type="text" placeholder="Tu usuario" autocomplete="username"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+        <label class="lbl">Contraseña</label>
+        <input class="inp" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="auth-btn auth-btn-login" onclick="doLogin()">Iniciar sesión →</button>
+        <div style="text-align:center;margin-top:16px">
+          <span style="font-size:12px;color:var(--so)">¿Primera vez? </span>
+          <span style="font-size:12px;color:var(--ac);cursor:pointer;font-weight:700" onclick="authTab('registro')">Crear cuenta →</span>
+        </div>
+        <div class="auth-footer">MedSys COFEPRIS · v21 · GPC CENETEC</div>
+      </div>
+
+      <!-- ── FORMULARIO REGISTRO ── -->
+      <div class="auth-form" id="form-registro" style="overflow-y:auto">
+        <div style="margin-bottom:18px">
+          <div style="font-size:18px;font-weight:800;color:var(--tx)">Crear tu cuenta</div>
+          <div style="font-size:12px;color:var(--so);margin-top:3px">Solo se hace una vez · Tus datos son privados</div>
+        </div>
+
+        <label class="lbl">Nombre completo *</label>
+        <input class="inp" id="reg-nombre" placeholder="Dr./Dra. Nombre Apellidos">
+
+        <label class="lbl">Especialidad</label>
+        <input class="inp" id="reg-esp" placeholder="Medicina General, Pediatría...">
+
+        <label class="lbl">Cédula profesional</label>
+        <input class="inp" id="reg-cedula" placeholder="0000000">
+
+        <label class="lbl">Nombre de la clínica / consultorio</label>
+        <input class="inp" id="reg-clinica" placeholder="Clínica Santa María">
+
+        <label class="lbl">Teléfono</label>
+        <input class="inp" id="reg-tel" placeholder="+52 000 000 0000">
+
+        <label class="lbl">Especialidad para Historia Clínica</label>
+        <select class="inp" id="reg-hcesp">
+          <option value="general">🏥 Medicina General</option>
+          <option value="gineco">🌸 Ginecología</option>
+          <option value="pediatria">👶 Pediatría</option>
+          <option value="urgencias">🚨 Urgencias</option>
+          <option value="cardio">❤️ Cardiología</option>
+          <option value="traumato">🦴 Traumatología</option>
+          <option value="dermato">🩹 Dermatología</option>
+          <option value="oftalmologia">👁️ Oftalmología</option>
+          <option value="psiquiatria">🧠 Psiquiatría</option>
+        </select>
+
+        <div style="height:1px;background:var(--bd);margin:12px 0"></div>
+        <div style="font-size:11px;font-weight:700;color:var(--so);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Credenciales de acceso</div>
+
+        <label class="lbl">Usuario *</label>
+        <input class="inp" id="reg-user" placeholder="Ej: drlopez" oninput="this.value=this.value.toLowerCase().replace(/\s/g,'')">
+
+        <label class="lbl">Contraseña *</label>
+        <input class="inp" type="password" id="reg-pass" placeholder="Mínimo 4 caracteres">
+
+        <label class="lbl">Confirmar contraseña *</label>
+        <input class="inp" type="password" id="reg-pass2" placeholder="Repite la contraseña">
+
+        <button class="auth-btn auth-btn-reg" onclick="regFinalizar()">✅ Crear mi cuenta →</button>
+        <div style="text-align:center;margin-top:12px">
+          <span style="font-size:12px;color:var(--so)">¿Ya tienes cuenta? </span>
+          <span style="font-size:12px;color:var(--ac);cursor:pointer;font-weight:700" onclick="authTab('login')">Iniciar sesión →</span>
+        </div>
+        <div class="auth-footer">MedSys COFEPRIS · v21 · GPC CENETEC</div>
+      </div>
+
+    </div><!-- /auth-forms -->
+  </div><!-- /auth-container -->
+</div><!-- /login-screen -->
 
 <!-- ══════════════ MODAL GESTIÓN DE USUARIOS ══════════════ -->
 <div id="usr-modal">
@@ -1320,7 +1473,24 @@ input:checked+.togsl:before{transform:translateX(20px)}
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <button class="pill pg2" onclick="hcDocGuardar()">💾 Guardar documentos</button>
+      <button class="pill pb" onclick="hcIAAnalizar()" id="ia-btn-hc">🤖 Analizar con IA</button>
       <button class="pill pn" onclick="hcDocLimpiar()">🗑️ Limpiar selección</button>
+    </div>
+
+    <!-- Panel de análisis IA -->
+    <div id="ia-panel">
+      <div class="ia-loading" id="ia-loading" style="display:none">
+        <div class="ia-dots"><span>●</span><span>●</span><span>●</span></div>
+        <span>Analizando imagen con IA... esto puede tomar unos segundos</span>
+      </div>
+      <div id="ia-resultado-content" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-size:13px;font-weight:700;color:var(--ac)">🤖 Análisis de IA</span>
+          <button onclick="document.getElementById('ia-panel').classList.remove('show')" style="background:none;border:none;color:var(--so);cursor:pointer;font-size:13px">✕</button>
+        </div>
+        <div class="ia-resultado" id="ia-texto"></div>
+        <div class="ia-warning">⚠️ Este análisis es orientativo y de apoyo al médico. No reemplaza el criterio clínico ni el diagnóstico médico profesional.</div>
+      </div>
     </div>
 
     <!-- Galería de documentos guardados -->
@@ -1772,7 +1942,17 @@ input:checked+.togsl:before{transform:translateX(20px)}
 
 <!-- ═══════════════════════ PEDIÁTRICA ═══════════════════════ -->
 <div id="page-ped" class="pg">
-  <div class="ph"><div class="pt">👶 Calculadora Dosis Pediátrica</div><div class="ps">25 medicamentos · c/8h y c/12h · Volumen automático</div></div>
+  <div class="ph"><div class="pt">👶 Pediatría Integral</div><div class="ps">Dosis · Curvas OMS · Scores · 25 medicamentos</div></div>
+
+  <!-- Pestañas -->
+  <div class="tabs" style="margin-bottom:14px">
+    <div class="tab active" onclick="stab('ped','dosis')">💊 Calculadora Dosis</div>
+    <div class="tab" onclick="stab('ped','curvas')">📈 Curvas de Crecimiento OMS</div>
+    <div class="tab" onclick="stab('ped','scores')">📋 Scores Pediátricos</div>
+  </div>
+
+  <!-- ══ CALCULADORA DOSIS ══ -->
+  <div id="ped-dosis" class="tc active">
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px">
     <div>
       <div class="card"><div class="ct">👶 Datos del Paciente</div>
@@ -1803,7 +1983,226 @@ input:checked+.togsl:before{transform:translateX(20px)}
       <tbody id="ped-ref-body"></tbody></table>
     </div>
   </div>
-</div>
+  </div><!-- /ped-dosis -->
+
+  <!-- ══ CURVAS DE CRECIMIENTO OMS ══ -->
+  <div id="ped-curvas" class="tc">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:14px">
+      <div class="card"><div class="ct">👶 Datos del Niño</div>
+        <div class="fr">
+          <div class="fg"><label class="lbl">Edad (meses)</label><input class="inp" type="number" id="cur-edad" min="0" max="60" placeholder="0-60 meses" oninput="calcCurvas()"></div>
+          <div class="fg"><label class="lbl">Sexo</label><select class="inp" id="cur-sexo" onchange="calcCurvas()"><option value="m">Masculino</option><option value="f">Femenino</option></select></div>
+          <div class="fg"><label class="lbl">Peso (kg)</label><input class="inp" type="number" id="cur-peso" step="0.1" oninput="calcCurvas()"></div>
+          <div class="fg"><label class="lbl">Talla (cm)</label><input class="inp" type="number" id="cur-talla" step="0.1" oninput="calcCurvas()"></div>
+          <div class="fg"><label class="lbl">Perímetro cefálico (cm)</label><input class="inp" type="number" id="cur-pc" step="0.1" oninput="calcCurvas()"></div>
+        </div>
+      </div>
+      <div class="card" style="border-color:rgba(63,182,139,.3)"><div class="ct">📊 Resultados — Percentiles OMS</div>
+        <div id="cur-resultado" style="color:var(--mu);font-size:13px">Ingresa los datos del paciente.</div>
+      </div>
+    </div>
+
+    <!-- Gráfica visual de percentiles -->
+    <div class="card">
+      <div class="ct">📈 Gráfica Peso/Edad (OMS 0-5 años)</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="pill pn" style="font-size:11px" onclick="graficaCurva('peso')">⚖️ Peso/Edad</button>
+        <button class="pill pn" style="font-size:11px" onclick="graficaCurva('talla')">📏 Talla/Edad</button>
+        <button class="pill pn" style="font-size:11px" onclick="graficaCurva('pc')">🔵 P.Cefálico/Edad</button>
+        <button class="pill pn" style="font-size:11px" onclick="graficaCurva('imc')">📐 IMC/Edad</button>
+      </div>
+      <canvas id="cur-canvas" width="800" height="350" style="width:100%;max-height:350px;background:var(--card);border-radius:8px"></canvas>
+      <div style="display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;font-size:11px;color:var(--so)">
+        <span><span style="color:#e53935">——</span> p3</span>
+        <span><span style="color:#fb8c00">——</span> p15</span>
+        <span><span style="color:#43a047">——</span> p50 (mediana)</span>
+        <span><span style="color:#fb8c00">——</span> p85</span>
+        <span><span style="color:#e53935">——</span> p97</span>
+        <span><span style="color:#2EA8E0">●</span> Paciente actual</span>
+      </div>
+    </div>
+
+    <!-- Interpretación nutricional -->
+    <div class="card">
+      <div class="ct">🍽️ Clasificación Nutricional OMS</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;font-size:12px">
+        <div style="background:var(--card);border-radius:8px;padding:10px">
+          <div style="font-weight:700;color:var(--rd);margin-bottom:4px">Desnutrición aguda grave</div>
+          <div style="color:var(--so)">P/T &lt; -3 DE ó &lt; p1</div>
+        </div>
+        <div style="background:var(--card);border-radius:8px;padding:10px">
+          <div style="font-weight:700;color:var(--am);margin-bottom:4px">Desnutrición aguda moderada</div>
+          <div style="color:var(--so)">P/T -3 a -2 DE ó p1-p3</div>
+        </div>
+        <div style="background:var(--card);border-radius:8px;padding:10px">
+          <div style="font-weight:700;color:var(--ac2);margin-bottom:4px">Peso normal</div>
+          <div style="color:var(--so)">P/E entre p3 y p97</div>
+        </div>
+        <div style="background:var(--card);border-radius:8px;padding:10px">
+          <div style="font-weight:700;color:var(--am);margin-bottom:4px">Sobrepeso</div>
+          <div style="color:var(--so)">IMC/E entre p85 y p97</div>
+        </div>
+        <div style="background:var(--card);border-radius:8px;padding:10px">
+          <div style="font-weight:700;color:var(--rd);margin-bottom:4px">Obesidad</div>
+          <div style="color:var(--so)">IMC/E &gt; p97</div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /ped-curvas -->
+
+  <!-- ══ SCORES PEDIÁTRICOS ══ -->
+  <div id="ped-scores" class="tc">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:13px">
+
+      <!-- APGAR -->
+      <div class="card">
+        <div class="ct">🩺 APGAR Neonatal</div>
+        <div style="font-size:12px;color:var(--so);margin-bottom:12px">Evalúa la adaptación del recién nacido (1' y 5')</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <tr style="background:var(--card)"><th style="padding:5px 8px;text-align:left">Parámetro</th><th style="padding:5px;text-align:center">0</th><th style="padding:5px;text-align:center">1</th><th style="padding:5px;text-align:center">2</th><th style="padding:5px;text-align:center">Pts</th></tr>
+          <tr><td style="padding:5px 8px">Frecuencia cardíaca</td><td style="text-align:center">Ausente</td><td style="text-align:center">&lt;100</td><td style="text-align:center">≥100</td><td style="text-align:center"><select class="inp" id="ap-fc" onchange="calcAPGAR()" style="width:50px;padding:2px 4px;font-size:11px"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></td></tr>
+          <tr style="background:var(--card)"><td style="padding:5px 8px">Esfuerzo respiratorio</td><td style="text-align:center">Ausente</td><td style="text-align:center">Llanto débil</td><td style="text-align:center">Llanto fuerte</td><td style="text-align:center"><select class="inp" id="ap-resp" onchange="calcAPGAR()" style="width:50px;padding:2px 4px;font-size:11px"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></td></tr>
+          <tr><td style="padding:5px 8px">Tono muscular</td><td style="text-align:center">Flácido</td><td style="text-align:center">Flexión leve</td><td style="text-align:center">Movim. activo</td><td style="text-align:center"><select class="inp" id="ap-tono" onchange="calcAPGAR()" style="width:50px;padding:2px 4px;font-size:11px"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></td></tr>
+          <tr style="background:var(--card)"><td style="padding:5px 8px">Irritabilidad refleja</td><td style="text-align:center">Sin respuesta</td><td style="text-align:center">Mueca</td><td style="text-align:center">Tos/Estornudo</td><td style="text-align:center"><select class="inp" id="ap-irrit" onchange="calcAPGAR()" style="width:50px;padding:2px 4px;font-size:11px"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></td></tr>
+          <tr><td style="padding:5px 8px">Coloración</td><td style="text-align:center">Azul/Pálido</td><td style="text-align:center">Acrocianosis</td><td style="text-align:center">Rosado</td><td style="text-align:center"><select class="inp" id="ap-color" onchange="calcAPGAR()" style="width:50px;padding:2px 4px;font-size:11px"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></td></tr>
+        </table>
+        <div id="apgar-resultado" style="margin-top:10px;padding:10px;background:var(--card);border-radius:8px;font-size:13px;font-weight:700"></div>
+      </div>
+
+      <!-- Silverman-Anderson -->
+      <div class="card">
+        <div class="ct">🫁 Silverman-Anderson (Distrés Respiratorio RN)</div>
+        <div style="font-size:12px;color:var(--so);margin-bottom:12px">Evalúa severidad del distrés respiratorio neonatal</div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          <tr style="background:var(--card)"><th style="padding:5px 8px;text-align:left">Parámetro</th><th style="padding:5px;text-align:center">0</th><th style="padding:5px;text-align:center">1</th><th style="padding:5px;text-align:center">2</th><th style="padding:5px;text-align:center">Pts</th></tr>
+          <tr><td style="padding:5px 8px">Movim. tórax-abdomen</td><td style="text-align:center">Sincrónico</td><td style="text-align:center">Retardo tórax</td><td style="text-align:center">Disociado</td><td style="text-align:center"><select class="inp" id="sa-1" onchange="calcSilverman()" style="width:50px;padding:2px 4px;font-size:11px"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></td></tr>
+          <tr style="background:var(--card)"><td style="padding:5px 8px">Tiraje intercostal</td><td style="text-align:center">Ausente</td><td style="text-align:center">Leve</td><td style="text-align:center">Severo</td><td style="text-align:center"><select class="inp" id="sa-2" onchange="calcSilverman()" style="width:50px;padding:2px 4px;font-size:11px"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></td></tr>
+          <tr><td style="padding:5px 8px">Xifoides</td><td style="text-align:center">Ausente</td><td style="text-align:center">Leve</td><td style="text-align:center">Severo</td><td style="text-align:center"><select class="inp" id="sa-3" onchange="calcSilverman()" style="width:50px;padding:2px 4px;font-size:11px"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></td></tr>
+          <tr style="background:var(--card)"><td style="padding:5px 8px">Aleteo nasal</td><td style="text-align:center">Ausente</td><td style="text-align:center">Leve</td><td style="text-align:center">Severo</td><td style="text-align:center"><select class="inp" id="sa-4" onchange="calcSilverman()" style="width:50px;padding:2px 4px;font-size:11px"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></td></tr>
+          <tr><td style="padding:5px 8px">Quejido espiratorio</td><td style="text-align:center">Ausente</td><td style="text-align:center">Audible esteto</td><td style="text-align:center">Audible sin esteto</td><td style="text-align:center"><select class="inp" id="sa-5" onchange="calcSilverman()" style="width:50px;padding:2px 4px;font-size:11px"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select></td></tr>
+        </table>
+        <div id="silverman-resultado" style="margin-top:10px;padding:10px;background:var(--card);border-radius:8px;font-size:13px;font-weight:700"></div>
+      </div>
+
+      <!-- Escala de Glasgow Pediátrico -->
+      <div class="card">
+        <div class="ct">🧠 Glasgow Pediátrico</div>
+        <div style="font-size:12px;color:var(--so);margin-bottom:12px">Nivel de consciencia en niños (&lt;2 años)</div>
+        <div class="fr">
+          <div class="fg"><label class="lbl">Apertura ocular</label>
+            <select class="inp" id="gcs-oc" onchange="calcGCS()">
+              <option value="4">4 — Espontánea</option>
+              <option value="3">3 — Al hablarle</option>
+              <option value="2">2 — Al dolor</option>
+              <option value="1">1 — Ausente</option>
+            </select>
+          </div>
+          <div class="fg"><label class="lbl">Respuesta verbal</label>
+            <select class="inp" id="gcs-v" onchange="calcGCS()">
+              <option value="5">5 — Balbuceo/palabras normales</option>
+              <option value="4">4 — Llanto irritable</option>
+              <option value="3">3 — Llanto al dolor</option>
+              <option value="2">2 — Gemido al dolor</option>
+              <option value="1">1 — Ausente</option>
+            </select>
+          </div>
+          <div class="fg"><label class="lbl">Respuesta motora</label>
+            <select class="inp" id="gcs-m" onchange="calcGCS()">
+              <option value="6">6 — Movimiento espontáneo</option>
+              <option value="5">5 — Localiza dolor</option>
+              <option value="4">4 — Retira al dolor</option>
+              <option value="3">3 — Flexión anormal</option>
+              <option value="2">2 — Extensión anormal</option>
+              <option value="1">1 — Ausente</option>
+            </select>
+          </div>
+        </div>
+        <div id="gcs-resultado" style="margin-top:6px;padding:10px;background:var(--card);border-radius:8px;font-size:13px;font-weight:700"></div>
+      </div>
+
+      <!-- Escala de Wood-Downes (asma pediátrica) -->
+      <div class="card">
+        <div class="ct">🫁 Wood-Downes (Crisis de Asma Pediátrica)</div>
+        <div style="font-size:12px;color:var(--so);margin-bottom:12px">Severidad de la crisis asmática en niños</div>
+        <div class="fr">
+          <div class="fg"><label class="lbl">Sibilancias</label>
+            <select class="inp" id="wd-sib" onchange="calcWD()">
+              <option value="0">0 — No</option>
+              <option value="1">1 — Fin espiración</option>
+              <option value="2">2 — Toda espiración</option>
+              <option value="3">3 — Inspiración y espiración</option>
+            </select>
+          </div>
+          <div class="fg"><label class="lbl">Tiraje</label>
+            <select class="inp" id="wd-tir" onchange="calcWD()">
+              <option value="0">0 — No</option>
+              <option value="1">1 — Leve</option>
+              <option value="2">2 — Moderado</option>
+              <option value="3">3 — Severo</option>
+            </select>
+          </div>
+          <div class="fg"><label class="lbl">Entrada de aire</label>
+            <select class="inp" id="wd-aire" onchange="calcWD()">
+              <option value="0">0 — Buena</option>
+              <option value="1">1 — Disminuida</option>
+              <option value="2">2 — Muy disminuida</option>
+            </select>
+          </div>
+          <div class="fg"><label class="lbl">Cianosis</label>
+            <select class="inp" id="wd-cian" onchange="calcWD()">
+              <option value="0">0 — No</option>
+              <option value="4">4 — Sí</option>
+            </select>
+          </div>
+          <div class="fg"><label class="lbl">Nivel consciencia</label>
+            <select class="inp" id="wd-cons" onchange="calcWD()">
+              <option value="0">0 — Normal</option>
+              <option value="5">5 — Alterado</option>
+            </select>
+          </div>
+        </div>
+        <div id="wd-resultado" style="margin-top:6px;padding:10px;background:var(--card);border-radius:8px;font-size:13px;font-weight:700"></div>
+      </div>
+
+      <!-- Escala de deshidratación -->
+      <div class="card">
+        <div class="ct">💧 Evaluación de Deshidratación Pediátrica</div>
+        <div style="font-size:12px;color:var(--so);margin-bottom:12px">Escala clínica de deshidratación (Gorelick)</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dh-1" onchange="calcDeshidratacion"> Apariencia anormal (decaído/irritable)</label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dh-2" onchange="calcDeshidratacion"> Ojos hundidos</label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dh-3" onchange="calcDeshidratacion"> Mucosas secas</label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dh-4" onchange="calcDeshidratacion"> Llanto sin lágrimas</label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dh-5" onchange="calcDeshidratacion"> Llenado capilar &gt;2 seg</label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dh-6" onchange="calcDeshidratacion"> Piel con pliegue</label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dh-7" onchange="calcDeshidratacion"> Respiración anormal</label>
+          <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="dh-8" onchange="calcDeshidratacion"> Pulso débil o ausente</label>
+        </div>
+        <button class="pill pb" onclick="calcDeshidratacion()" style="margin-top:10px">Calcular</button>
+        <div id="dh-resultado" style="margin-top:8px;padding:10px;background:var(--card);border-radius:8px;font-size:13px;font-weight:700"></div>
+      </div>
+
+      <!-- Talla estimada -->
+      <div class="card">
+        <div class="ct">📏 Talla Blanco Familiar (Talla diana)</div>
+        <div style="font-size:12px;color:var(--so);margin-bottom:12px">Estimación de talla adulta según talla parental</div>
+        <div class="fr">
+          <div class="fg"><label class="lbl">Talla del padre (cm)</label><input class="inp" type="number" id="td-padre" oninput="calcTallaDiana()"></div>
+          <div class="fg"><label class="lbl">Talla de la madre (cm)</label><input class="inp" type="number" id="td-madre" oninput="calcTallaDiana()"></div>
+          <div class="fg"><label class="lbl">Sexo del hijo</label>
+            <select class="inp" id="td-sexo" onchange="calcTallaDiana()">
+              <option value="m">Masculino</option>
+              <option value="f">Femenino</option>
+            </select>
+          </div>
+        </div>
+        <div id="td-resultado" style="margin-top:8px;padding:10px;background:var(--card);border-radius:8px;font-size:13px;font-weight:700"></div>
+      </div>
+
+    </div><!-- /grid scores -->
+  </div><!-- /ped-scores -->
+
+</div><!-- /page-ped -->
 
 <!-- ═══════════════════════ CALCULADORAS ═══════════════════════ -->
 <div id="page-calc" class="pg">
@@ -3574,6 +3973,295 @@ function initPed(){
       <td><span class="pill pb" style="font-size:10px">${m.via}</span></td>
       <td style="font-size:11px;color:var(--mu)">${m.nota}</td>
     </tr>`).join('');
+  // Inicializar scores
+  calcAPGAR(); calcSilverman(); calcGCS(); calcWD(); calcTallaDiana();
+  graficaCurva('peso');
+}
+
+// ══════════════════════════════════════════════════════════
+// SCORES PEDIÁTRICOS
+// ══════════════════════════════════════════════════════════
+
+function calcAPGAR(){
+  const fc=parseInt(document.getElementById('ap-fc')?.value||0);
+  const resp=parseInt(document.getElementById('ap-resp')?.value||0);
+  const tono=parseInt(document.getElementById('ap-tono')?.value||0);
+  const irrit=parseInt(document.getElementById('ap-irrit')?.value||0);
+  const color=parseInt(document.getElementById('ap-color')?.value||0);
+  const total=fc+resp+tono+irrit+color;
+  let interp='',color2='var(--ac2)';
+  if(total<=3){interp='⚠️ Depresión severa — reanimación inmediata';color2='var(--rd)';}
+  else if(total<=6){interp='⚠️ Depresión moderada — estimulación y O₂';color2='var(--am)';}
+  else{interp='✅ Adaptación normal';color2='var(--ac2)';}
+  const el=document.getElementById('apgar-resultado');
+  if(el) el.innerHTML=`<span style="font-size:22px;color:${color2}">${total}/10</span> <span style="font-size:13px;font-weight:400;color:${color2}">${interp}</span>`;
+}
+
+function calcSilverman(){
+  let total=0;
+  [1,2,3,4,5].forEach(i=>{
+    total+=parseInt(document.getElementById('sa-'+i)?.value||0);
+  });
+  let interp='',col='var(--ac2)';
+  if(total===0){interp='Sin distrés';col='var(--ac2)';}
+  else if(total<=3){interp='⚠️ Distrés leve';col='var(--am)';}
+  else if(total<=6){interp='⚠️ Distrés moderado — soporte';col='var(--am)';}
+  else{interp='🚨 Distrés severo — intervención inmediata';col='var(--rd)';}
+  const el=document.getElementById('silverman-resultado');
+  if(el) el.innerHTML=`<span style="font-size:22px;color:${col}">${total}/10</span> <span style="color:${col};font-weight:400;font-size:13px">${interp}</span>`;
+}
+
+function calcGCS(){
+  const oc=parseInt(document.getElementById('gcs-oc')?.value||4);
+  const v=parseInt(document.getElementById('gcs-v')?.value||5);
+  const m=parseInt(document.getElementById('gcs-m')?.value||6);
+  const total=oc+v+m;
+  let interp='',col='var(--ac2)';
+  if(total<=8){interp='🚨 TCE grave — intubación considerar';col='var(--rd)';}
+  else if(total<=12){interp='⚠️ TCE moderado — monitoreo estrecho';col='var(--am)';}
+  else{interp='✅ Leve / Normal';col='var(--ac2)';}
+  const el=document.getElementById('gcs-resultado');
+  if(el) el.innerHTML=`<span style="font-size:22px;color:${col}">${total}/15</span> <span style="color:${col};font-weight:400;font-size:13px">${interp}</span>`;
+}
+
+function calcWD(){
+  const sib=parseInt(document.getElementById('wd-sib')?.value||0);
+  const tir=parseInt(document.getElementById('wd-tir')?.value||0);
+  const aire=parseInt(document.getElementById('wd-aire')?.value||0);
+  const cian=parseInt(document.getElementById('wd-cian')?.value||0);
+  const cons=parseInt(document.getElementById('wd-cons')?.value||0);
+  const total=sib+tir+aire+cian+cons;
+  let interp='',col='var(--ac2)';
+  if(total<=3){interp='✅ Crisis leve — β2 + observación';col='var(--ac2)';}
+  else if(total<=6){interp='⚠️ Crisis moderada — β2+anticolinérgico+esteroide';col='var(--am)';}
+  else{interp='🚨 Crisis grave — hospitalizar, β2 IV/MgSO₄';col='var(--rd)';}
+  const el=document.getElementById('wd-resultado');
+  if(el) el.innerHTML=`<span style="font-size:22px;color:${col}">${total}/14</span> <span style="color:${col};font-weight:400;font-size:13px">${interp}</span>`;
+}
+
+function calcDeshidratacion(){
+  let pts=0;
+  [1,2,3,4,5,6,7,8].forEach(i=>{
+    if(document.getElementById('dh-'+i)?.checked) pts++;
+  });
+  let interp='',col='var(--ac2)',trat='';
+  if(pts<=1){interp='Sin deshidratación o mínima';col='var(--ac2)';trat='Hidratación oral mantenimiento';}
+  else if(pts<=4){interp='⚠️ Deshidratación leve-moderada (~5-10%)';col='var(--am)';trat='SRO 50-100 mL/kg en 4h';}
+  else{interp='🚨 Deshidratación grave (>10%)';col='var(--rd)';trat='SSN 20 mL/kg IV en 20 min — hospitalizar';}
+  const el=document.getElementById('dh-resultado');
+  if(el) el.innerHTML=`<div style="color:${col}">${pts}/8 — ${interp}</div><div style="font-size:12px;color:var(--so);margin-top:4px">🩺 ${trat}</div>`;
+}
+
+function calcTallaDiana(){
+  const p=parseFloat(document.getElementById('td-padre')?.value||0);
+  const m=parseFloat(document.getElementById('td-madre')?.value||0);
+  const s=document.getElementById('td-sexo')?.value||'m';
+  if(!p||!m){document.getElementById('td-resultado').innerHTML='<span style="color:var(--so)">Ingresa las tallas de ambos padres.</span>';return;}
+  let diana,rango;
+  if(s==='m'){ diana=((p+m+13)/2).toFixed(1); rango=`${((p+m+13)/2-8.5).toFixed(1)} – ${((p+m+13)/2+8.5).toFixed(1)}`; }
+  else { diana=((p+m-13)/2).toFixed(1); rango=`${((p+m-13)/2-8.5).toFixed(1)} – ${((p+m-13)/2+8.5).toFixed(1)}`; }
+  document.getElementById('td-resultado').innerHTML=
+    `<div style="font-size:20px;color:var(--ac2);font-weight:800">${diana} cm</div>
+     <div style="font-size:12px;color:var(--so);margin-top:4px">Rango ±8.5 cm: <b style="color:var(--tx)">${rango} cm</b></div>
+     <div style="font-size:11px;color:var(--mu);margin-top:2px">Fórmula Tanner</div>`;
+}
+
+// ══════════════════════════════════════════════════════════
+// CURVAS DE CRECIMIENTO OMS (P3, P15, P50, P85, P97)
+// Datos simplificados basados en tablas OMS 0-60 meses
+// ══════════════════════════════════════════════════════════
+
+// Datos OMS: [mes, p3, p15, p50, p85, p97] — peso niños (kg)
+const OMS_PESO_M = [
+  [0,2.5,2.9,3.3,3.9,4.3],[1,3.4,3.8,4.5,5.1,5.7],[2,4.3,4.9,5.6,6.3,7.1],
+  [3,5.0,5.7,6.4,7.2,8.0],[4,5.6,6.3,7.0,7.9,8.7],[5,6.1,6.9,7.5,8.4,9.3],
+  [6,6.4,7.2,7.9,8.8,9.8],[9,7.1,8.0,8.9,9.9,10.9],[12,7.7,8.6,9.6,10.8,11.8],
+  [18,8.1,9.4,10.9,12.2,13.7],[24,9.7,10.8,12.2,13.6,15.3],[36,11.4,12.7,14.3,16.0,18.0],
+  [48,12.7,14.2,16.3,18.2,20.7],[60,14.1,15.8,18.3,20.5,23.5]
+];
+const OMS_PESO_F = [
+  [0,2.4,2.8,3.2,3.7,4.2],[1,3.2,3.6,4.2,4.8,5.5],[2,3.9,4.5,5.1,5.8,6.6],
+  [3,4.5,5.2,5.8,6.6,7.5],[4,5.0,5.7,6.4,7.3,8.2],[5,5.4,6.1,6.9,7.8,8.8],
+  [6,5.7,6.5,7.3,8.2,9.3],[9,6.3,7.2,8.2,9.3,10.4],[12,6.9,7.8,8.9,10.1,11.5],
+  [18,7.3,8.5,9.9,11.4,13.0],[24,9.0,10.2,11.5,13.2,14.9],[36,10.8,12.1,13.9,15.8,18.1],
+  [48,12.3,13.7,15.7,17.7,20.4],[60,13.7,15.3,17.7,20.2,23.4]
+];
+const OMS_TALLA_M = [
+  [0,46.1,47.9,49.9,51.8,53.7],[3,57.3,59.4,61.4,63.5,65.5],[6,63.3,65.5,67.6,69.8,71.9],
+  [9,68.0,70.1,72.3,74.5,76.5],[12,71.7,73.9,75.7,77.9,79.8],[18,77.5,79.9,82.3,84.7,87.0],
+  [24,82.3,84.9,87.8,90.4,93.0],[36,88.7,92.4,96.1,99.8,103.5],[48,94.9,98.9,102.9,106.8,110.7],
+  [60,100.7,104.9,109.2,113.5,117.7]
+];
+const OMS_TALLA_F = [
+  [0,45.4,47.3,49.1,51.0,52.9],[3,56.2,58.2,60.2,62.2,64.1],[6,61.2,63.5,65.7,67.9,70.1],
+  [9,65.6,68.0,70.4,72.8,75.2],[12,69.2,71.3,74.0,76.6,79.2],[18,75.0,77.5,80.7,83.7,86.7],
+  [24,80.0,82.9,85.7,88.7,91.9],[36,86.3,90.2,95.1,99.7,104.5],[48,92.4,96.4,101.4,106.2,111.3],
+  [60,98.4,102.7,108.4,113.8,119.2]
+];
+const OMS_PC_M = [
+  [0,31.7,32.9,34.5,36.0,37.3],[3,37.7,39.0,40.5,42.0,43.3],[6,41.5,42.8,44.3,45.8,47.1],
+  [9,43.6,44.9,46.3,47.8,49.0],[12,44.9,46.2,47.8,49.2,50.6],[18,46.5,47.8,49.6,51.2,52.7],
+  [24,47.6,49.0,50.8,52.3,53.8],[36,48.9,50.4,52.3,53.9,55.5],[60,50.0,51.6,53.5,55.2,56.9]
+];
+const OMS_PC_F = [
+  [0,31.7,32.7,33.9,35.1,36.2],[3,37.1,38.3,39.5,40.9,42.2],[6,40.3,41.5,42.9,44.3,45.6],
+  [9,42.3,43.5,44.8,46.2,47.4],[12,43.5,44.7,46.3,47.6,48.9],[18,45.1,46.3,48.1,49.5,51.0],
+  [24,46.4,47.6,49.4,50.8,52.1],[36,47.7,48.9,50.9,52.3,53.7],[60,48.8,50.1,52.2,53.7,55.1]
+];
+
+let curGrafica='peso';
+
+function graficaCurva(tipo){
+  curGrafica=tipo;
+  const sexo=document.getElementById('cur-sexo')?.value||'m';
+  let data,label,unit;
+  if(tipo==='peso'){data=sexo==='m'?OMS_PESO_M:OMS_PESO_F;label='Peso';unit='kg';}
+  else if(tipo==='talla'){data=sexo==='m'?OMS_TALLA_M:OMS_TALLA_F;label='Talla';unit='cm';}
+  else if(tipo==='pc'){data=sexo==='m'?OMS_PC_M:OMS_PC_F;label='Perímetro Cefálico';unit='cm';}
+  else{data=sexo==='m'?OMS_PESO_M:OMS_PESO_F;label='IMC';unit='kg/m²';} // placeholder
+
+  const canvas=document.getElementById('cur-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const W=canvas.width,H=canvas.height;
+  const PAD={top:30,right:20,bottom:40,left:50};
+  ctx.clearRect(0,0,W,H);
+
+  // Fondo
+  ctx.fillStyle='#1C2333';
+  ctx.fillRect(0,0,W,H);
+
+  const meses=data.map(d=>d[0]);
+  const maxM=meses[meses.length-1];
+  const allVals=data.flatMap(d=>[d[1],d[5]]);
+  const minV=Math.min(...allVals)*0.95, maxV=Math.max(...allVals)*1.05;
+
+  const toX=m=>PAD.left+(m/maxM)*(W-PAD.left-PAD.right);
+  const toY=v=>H-PAD.bottom-((v-minV)/(maxV-minV))*(H-PAD.top-PAD.bottom);
+
+  // Cuadrícula
+  ctx.strokeStyle='rgba(48,54,61,0.8)';ctx.lineWidth=0.5;
+  for(let i=0;i<=5;i++){
+    const y=PAD.top+i*(H-PAD.top-PAD.bottom)/5;
+    ctx.beginPath();ctx.moveTo(PAD.left,y);ctx.lineTo(W-PAD.right,y);ctx.stroke();
+    const v=(minV+(maxV-minV)*(1-i/5)).toFixed(1);
+    ctx.fillStyle='#8B949E';ctx.font='11px sans-serif';ctx.textAlign='right';
+    ctx.fillText(v,PAD.left-4,y+4);
+  }
+  // Ejes X
+  [0,6,12,18,24,36,48,60].filter(m=>m<=maxM).forEach(m=>{
+    const x=toX(m);
+    ctx.beginPath();ctx.moveTo(x,H-PAD.bottom);ctx.lineTo(x,PAD.top);ctx.stroke();
+    ctx.fillStyle='#8B949E';ctx.textAlign='center';
+    ctx.fillText(m+'m',x,H-PAD.bottom+14);
+  });
+
+  // Curvas
+  const colors=['#e53935','#fb8c00','#43a047','#fb8c00','#e53935'];
+  const labels=['p3','p15','p50','p85','p97'];
+  [1,2,3,4,5].forEach((col,ci)=>{
+    ctx.beginPath();ctx.strokeStyle=colors[ci];ctx.lineWidth=ci===2?2.5:1.5;ctx.setLineDash(ci===2?[]:[4,3]);
+    data.forEach((d,i)=>{
+      const x=toX(d[0]),y=toY(d[col]);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.stroke();ctx.setLineDash([]);
+    // Etiqueta al final
+    const last=data[data.length-1];
+    ctx.fillStyle=colors[ci];ctx.font='bold 10px sans-serif';ctx.textAlign='left';
+    ctx.fillText(labels[ci],toX(last[0])+2,toY(last[col])+3);
+  });
+
+  // Punto del paciente
+  const edad=parseFloat(document.getElementById('cur-edad')?.value||'');
+  let val=0;
+  if(tipo==='peso') val=parseFloat(document.getElementById('cur-peso')?.value||'');
+  else if(tipo==='talla') val=parseFloat(document.getElementById('cur-talla')?.value||'');
+  else if(tipo==='pc') val=parseFloat(document.getElementById('cur-pc')?.value||'');
+
+  if(!isNaN(edad)&&!isNaN(val)&&val>0&&edad>=0&&edad<=maxM){
+    const px=toX(edad),py=toY(val);
+    ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);
+    ctx.fillStyle='#2EA8E0';ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';ctx.textAlign='center';
+    ctx.fillText(val,px,py-10);
+  }
+
+  // Título
+  ctx.fillStyle='#E6EDF3';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+  ctx.fillText(`${label}/Edad · ${sexo==='m'?'Niño':'Niña'} (OMS 0-${maxM}m) · ${unit}`,W/2,20);
+}
+
+function calcCurvas(){
+  const edad=parseFloat(document.getElementById('cur-edad')?.value||'');
+  const sexo=document.getElementById('cur-sexo')?.value||'m';
+  const peso=parseFloat(document.getElementById('cur-peso')?.value||'');
+  const talla=parseFloat(document.getElementById('cur-talla')?.value||'');
+  const pc=parseFloat(document.getElementById('cur-pc')?.value||'');
+  graficaCurva(curGrafica);
+
+  if(isNaN(edad)){document.getElementById('cur-resultado').innerHTML='<span style="color:var(--so)">Ingresa la edad en meses.</span>';return;}
+
+  const pesoData=sexo==='m'?OMS_PESO_M:OMS_PESO_F;
+  const tallaData=sexo==='m'?OMS_TALLA_M:OMS_TALLA_F;
+  const pcData=sexo==='m'?OMS_PC_M:OMS_PC_F;
+
+  function interpolar(data,mes){
+    if(mes<=data[0][0]) return data[0];
+    if(mes>=data[data.length-1][0]) return data[data.length-1];
+    for(let i=0;i<data.length-1;i++){
+      if(mes>=data[i][0]&&mes<=data[i+1][0]){
+        const t=(mes-data[i][0])/(data[i+1][0]-data[i][0]);
+        return data[i].map((v,j)=>j===0?mes:v+(data[i+1][j]-v)*t);
+      }
+    }
+    return data[0];
+  }
+
+  function percentil(val,ref){
+    if(isNaN(val)||!ref) return null;
+    const [,p3,p15,p50,p85,p97]=ref;
+    if(val<p3) return '<p3';
+    if(val<p15) return 'p3-p15';
+    if(val<p50) return 'p15-p50';
+    if(val<p85) return 'p50-p85';
+    if(val<p97) return 'p85-p97';
+    return '>p97';
+  }
+
+  function badge(perc){
+    const map={'<p3':'🔴 <p3 — Bajo','p3-p15':'🟠 p3-p15 — Bajo-normal','p15-p50':'🟢 p15-p50 — Normal','p50-p85':'🟢 p50-p85 — Normal','p85-p97':'🟠 p85-p97 — Alto-normal','>p97':'🔴 >p97 — Elevado'};
+    const col={'<p3':'var(--rd)','p3-p15':'var(--am)','p15-p50':'var(--ac2)','p50-p85':'var(--ac2)','p85-p97':'var(--am)','>p97':'var(--rd)'};
+    return perc?`<span style="color:${col[perc]||'var(--so)'}">${map[perc]||perc}</span>`:'—';
+  }
+
+  const rPeso=interpolar(pesoData,edad);
+  const rTalla=interpolar(tallaData,edad);
+  const rPC=interpolar(pcData,edad);
+
+  let imc=null;
+  if(!isNaN(peso)&&!isNaN(talla)&&talla>0) imc=(peso/((talla/100)**2)).toFixed(1);
+
+  const pPeso=percentil(peso,rPeso);
+  const pTalla=percentil(talla,rTalla);
+  const pPC=percentil(pc,rPC);
+
+  document.getElementById('cur-resultado').innerHTML=`
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${!isNaN(peso)&&peso>0?`<div><div style="font-size:11px;color:var(--so);text-transform:uppercase;font-weight:700;margin-bottom:3px">⚖️ Peso</div>
+        <div style="font-size:13px">${badge(pPeso)}</div>
+        <div style="font-size:11px;color:var(--mu)">Mediana p50: ${rPeso[3]?.toFixed(1)} kg · Rango normal: ${rPeso[2]?.toFixed(1)}-${rPeso[4]?.toFixed(1)} kg</div></div>`:''}
+      ${!isNaN(talla)&&talla>0?`<div><div style="font-size:11px;color:var(--so);text-transform:uppercase;font-weight:700;margin-bottom:3px">📏 Talla</div>
+        <div style="font-size:13px">${badge(pTalla)}</div>
+        <div style="font-size:11px;color:var(--mu)">Mediana p50: ${rTalla[3]?.toFixed(1)} cm</div></div>`:''}
+      ${!isNaN(pc)&&pc>0?`<div><div style="font-size:11px;color:var(--so);text-transform:uppercase;font-weight:700;margin-bottom:3px">🔵 Perímetro cefálico</div>
+        <div style="font-size:13px">${badge(pPC)}</div>
+        <div style="font-size:11px;color:var(--mu)">Mediana p50: ${rPC[3]?.toFixed(1)} cm</div></div>`:''}
+      ${imc?`<div><div style="font-size:11px;color:var(--so);text-transform:uppercase;font-weight:700;margin-bottom:3px">📐 IMC</div>
+        <div style="font-size:18px;font-weight:800;color:var(--ac)">${imc}</div></div>`:''}
+      <div style="font-size:11px;color:var(--mu)">Datos OMS · ${sexo==='m'?'Niño':'Niña'} · ${edad} meses</div>
+    </div>`;
 }
 function estimaPeso(){
   const e=document.getElementById('ped-edad').value;
@@ -3590,11 +4278,19 @@ function calcPed(){
   const res=document.getElementById('ped-result');
   if(isNaN(idx)||idx<0){res.innerHTML='<div style="color:var(--mu)">Selecciona un medicamento.</div>';return;}
   const m=D_BASE.ped_meds[idx];
-  const calc=(dkg)=>dkg!=null?Math.min(dkg*peso,m.md||Infinity):null;
-  const dMin=calc(m.dmin),dMax=m.dmax&&m.dmax!==m.dmin?calc(m.dmax):null;
-  const capped=m.md&&dMin&&dMin>=m.md;
-  const conc=m.conc[pedPI];const pres=m.pres[pedPI];
-  const vol=conc&&dMin?Math.round(dMin/conc*10)/10:null;
+
+  // Calcular dosis baja y dosis alta
+  const calcDosis=(dkg)=> dkg!=null ? Math.round(Math.min(dkg*peso, m.md||Infinity)*10)/10 : null;
+  const dosisMin = calcDosis(m.dmin);
+  const dosisMax = m.dmax && m.dmax !== m.dmin ? calcDosis(m.dmax) : null;
+  const hayRango = dosisMax !== null && dosisMax !== dosisMin;
+  const cappedMin = m.md && dosisMin && dosisMin >= m.md;
+  const cappedMax = m.md && dosisMax && dosisMax >= m.md;
+
+  const conc=m.conc[pedPI]; const pres=m.pres[pedPI];
+  const volMin=conc&&dosisMin ? Math.round(dosisMin/conc*10)/10 : null;
+  const volMax=conc&&dosisMax ? Math.round(dosisMax/conc*10)/10 : null;
+
   document.getElementById('ped-pres').innerHTML=m.pres.filter(p=>p).map((p,i)=>
     `<span class="pill ${pedPI===i?'pb':'pn'}" onclick="pedPI=${i};calcPed()" style="cursor:pointer">${p}</span>`).join(' ');
   document.getElementById('ped-info').innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -3603,33 +4299,55 @@ function calcPed(){
     <span class="pill pb">c/12h: ${m.int12}</span>
     ${m.md?`<span class="pill pa">Máx ${m.md}mg/dosis</span>`:''}
   </div>`;
+
   if(!peso){res.innerHTML='<div style="color:var(--mu)">Ingresa el peso del paciente.</div>';return;}
-  const d8=dMin!=null?Math.round(dMin*10)/10:'—';
-  const d12=dMin!=null?Math.round(Math.min((m.dmin*1.5)*peso,m.md||Infinity)*10)/10:'—';
+
   res.innerHTML=`
-    <div style="font-size:10px;color:var(--so);font-weight:700;margin-bottom:6px">DOSIS CALCULADA (${peso} kg)</div>
-    <div style="font-size:28px;font-weight:800;color:var(--ac2);font-family:'DM Mono';letter-spacing:-1px;margin-bottom:12px">
-      ${d8} mg ${dMax?`<span style="font-size:17px;opacity:.7">– ${Math.round(dMax*10)/10} mg</span>`:''}
-    </div>
-    ${capped?`<div style="background:rgba(227,161,63,.1);border:1px solid rgba(227,161,63,.3);border-radius:8px;padding:8px;font-size:12px;color:var(--am);margin-bottom:10px">⚠ Limitada al máximo (${m.md} mg)</div>`:''}
+    <div style="font-size:10px;color:var(--so);font-weight:700;margin-bottom:8px">DOSIS CALCULADA — PACIENTE ${peso} kg</div>
+
+    ${hayRango ? `
+    <!-- Rango dosis baja / dosis alta -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div style="background:rgba(63,182,139,.08);border:1px solid rgba(63,182,139,.3);border-radius:10px;padding:12px">
-        <div style="font-size:10px;color:var(--so);font-weight:700;margin-bottom:4px">⏱ INTERVALO c/8 HORAS</div>
-        <div style="font-size:15px;font-weight:700;color:var(--ac2)">${m.int8}</div>
-        <div style="font-size:11px;color:var(--so);margin-top:2px">${d8} mg / toma</div>
+      <div style="background:rgba(63,182,139,.08);border:2px solid rgba(63,182,139,.4);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:10px;font-weight:700;color:var(--ac2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">💊 Dosis BAJA</div>
+        <div style="font-size:26px;font-weight:800;color:var(--ac2);font-family:'DM Mono'">${dosisMin} mg</div>
+        <div style="font-size:11px;color:var(--so);margin-top:4px">${m.dmin} mg/kg</div>
+        ${cappedMin?`<div style="font-size:10px;color:var(--am);margin-top:4px">⚠ Cap: ${m.md}mg</div>`:''}
+        ${volMin?`<div style="font-size:12px;color:var(--ac);font-weight:700;margin-top:6px;font-family:'DM Mono'">${volMin} mL</div><div style="font-size:10px;color:var(--mu)">${pres}</div>`:''}
       </div>
-      <div style="background:rgba(46,168,224,.08);border:1px solid rgba(46,168,224,.3);border-radius:10px;padding:12px">
-        <div style="font-size:10px;color:var(--so);font-weight:700;margin-bottom:4px">⏱ INTERVALO c/12 HORAS</div>
-        <div style="font-size:15px;font-weight:700;color:var(--ac)">${m.int12}</div>
-        <div style="font-size:11px;color:var(--so);margin-top:2px">~${d12} mg / toma (ajustar)</div>
+      <div style="background:rgba(46,168,224,.08);border:2px solid rgba(46,168,224,.4);border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:10px;font-weight:700;color:var(--ac);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px">💊 Dosis ALTA</div>
+        <div style="font-size:26px;font-weight:800;color:var(--ac);font-family:'DM Mono'">${dosisMax} mg</div>
+        <div style="font-size:11px;color:var(--so);margin-top:4px">${m.dmax} mg/kg</div>
+        ${cappedMax?`<div style="font-size:10px;color:var(--am);margin-top:4px">⚠ Cap: ${m.md}mg</div>`:''}
+        ${volMax?`<div style="font-size:12px;color:var(--ac);font-weight:700;margin-top:6px;font-family:'DM Mono'">${volMax} mL</div><div style="font-size:10px;color:var(--mu)">${pres}</div>`:''}
+      </div>
+    </div>` : `
+    <!-- Dosis única -->
+    <div style="text-align:center;background:rgba(63,182,139,.08);border:2px solid rgba(63,182,139,.4);border-radius:12px;padding:16px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--ac2);margin-bottom:6px">💊 DOSIS</div>
+      <div style="font-size:30px;font-weight:800;color:var(--ac2);font-family:'DM Mono'">${dosisMin} mg</div>
+      <div style="font-size:12px;color:var(--so);margin-top:4px">${m.dmin} mg/kg × ${peso} kg</div>
+      ${cappedMin?`<div style="font-size:11px;color:var(--am);margin-top:6px">⚠ Limitada al máximo (${m.md} mg)</div>`:''}
+      ${volMin?`<div style="font-size:14px;color:var(--ac);font-weight:700;margin-top:8px;font-family:'DM Mono'">${volMin} mL <span style="font-size:11px;color:var(--mu)">(${pres})</span></div>`:''}
+    </div>`}
+
+    <!-- Intervalos -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px">
+        <div style="font-size:10px;color:var(--so);font-weight:700;margin-bottom:3px">⏱ c/8 HORAS</div>
+        <div style="font-size:12px;font-weight:600;color:var(--tx)">${m.int8}</div>
+        ${hayRango?`<div style="font-size:11px;color:var(--so);margin-top:2px">${dosisMin}–${dosisMax} mg</div>`:`<div style="font-size:11px;color:var(--so);margin-top:2px">${dosisMin} mg / toma</div>`}
+      </div>
+      <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px">
+        <div style="font-size:10px;color:var(--so);font-weight:700;margin-bottom:3px">⏱ c/12 HORAS</div>
+        <div style="font-size:12px;font-weight:600;color:var(--tx)">${m.int12}</div>
+        ${hayRango?`<div style="font-size:11px;color:var(--so);margin-top:2px">${dosisMin}–${dosisMax} mg</div>`:`<div style="font-size:11px;color:var(--so);margin-top:2px">${dosisMin} mg / toma</div>`}
       </div>
     </div>
-    ${vol?`<div style="background:rgba(46,168,224,.08);border:1px solid rgba(46,168,224,.2);border-radius:10px;padding:12px;margin-bottom:10px">
-      <div style="font-size:10px;color:var(--so);font-weight:700;margin-bottom:3px">VOLUMEN (${pres})</div>
-      <div style="font-size:22px;font-weight:800;color:var(--ac);font-family:'DM Mono'">${vol} mL</div>
-    </div>`:''}
+
     <div style="font-size:12px;color:var(--am);background:rgba(227,161,63,.08);border:1px solid rgba(227,161,63,.2);border-radius:8px;padding:9px">⚠ ${m.nota}</div>`;
-  log(`👶 ${m.n} ${peso}kg → ${d8}mg`);
+  log(`👶 ${m.n} ${peso}kg → ${dosisMin}${dosisMax?'–'+dosisMax:''}mg`);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -4331,15 +5049,16 @@ function renderExpArchivos(p, filtro=''){
     return;
   }
   grid.innerHTML = lista.map((a,i)=>`
-    <div class="arch-card" onclick="archVerImagen('${a.id}','${p.id}')">
+    <div class="arch-card">
       ${a.type&&a.type.startsWith('image/')
-        ? `<img class="arch-thumb" src="${a.data}" alt="${a.desc}" loading="lazy">`
-        : `<div class="arch-thumb-pdf">📄</div>`}
+        ?`<img class="arch-thumb" src="${a.data}" alt="${a.desc}" loading="lazy" onclick="archVerImagen('${a.id}','${p.id}')" style="cursor:zoom-in">`
+        :`<div class="arch-thumb-pdf" onclick="archVerPDF('${a.id}','${p.id}')" style="cursor:pointer">📄</div>`}
       <button class="arch-del" onclick="event.stopPropagation();expEliminarArchivo('${a.id}')" title="Eliminar">✕</button>
       <div class="arch-info">
         <div class="arch-cat">${a.cat||'Documento'}</div>
         <div class="arch-desc" title="${a.desc}">${a.desc}</div>
         <div class="arch-fecha">📅 ${a.fecha||''}</div>
+        ${a.type&&a.type.startsWith('image/')?`<button onclick="event.stopPropagation();archIAAnalizar('${a.id}','${p.id}')" style="margin-top:5px;background:rgba(46,168,224,.1);border:1px solid rgba(46,168,224,.3);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--ac);cursor:pointer;width:100%">🤖 Analizar con IA</button>`:''}
       </div>
     </div>`).join('');
 }
@@ -5338,6 +6057,198 @@ function copyVersionJsonExample(){
   navigator.clipboard.writeText(txt).then(()=>toast('✓ Ejemplo copiado al portapapeles')).catch(()=>toast('No se pudo copiar','err'));
 }
 
+function authTab(tab){
+  ['login','registro'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('form-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='login') setTimeout(()=>document.getElementById('login-user').focus(),100);
+  if(tab==='registro') setTimeout(()=>document.getElementById('reg-nombre').focus(),100);
+}
+
+// ══════════════════════════════════════════════════════════
+// REGISTRO INICIAL — Primera vez que se abre la app
+// ══════════════════════════════════════════════════════════
+const REG_KEY = 'medsys_registro_done';
+
+function regVerificar(){
+  const usuarios = getUsuarios();
+  const regDone  = localStorage.getItem(REG_KEY);
+  if(!regDone && usuarios.length <= 1 && usuarios[0]?.user === 'admin'){
+    // Primera vez — mostrar pantalla de login con tab de registro activo
+    document.getElementById('login-screen').style.display='flex';
+    setTimeout(()=>authTab('registro'), 100);
+    return true;
+  }
+  return false;
+}
+
+function regFinalizar(){
+  const nombre  = document.getElementById('reg-nombre').value.trim();
+  const user    = document.getElementById('reg-user').value.trim();
+  const pass    = document.getElementById('reg-pass').value;
+  const pass2   = document.getElementById('reg-pass2').value;
+
+  if(!nombre){ toast('Escribe tu nombre completo','err'); return; }
+  if(!user)  { toast('Escribe un nombre de usuario','err'); return; }
+  if(!pass || pass.length < 4){ toast('La contraseña debe tener al menos 4 caracteres','err'); return; }
+  if(pass !== pass2){ toast('Las contraseñas no coinciden','err'); return; }
+
+  // Guardar configuración
+  cfg.nombre  = nombre;
+  cfg.esp     = document.getElementById('reg-esp').value.trim();
+  cfg.cedula  = document.getElementById('reg-cedula').value.trim();
+  cfg.clinica = document.getElementById('reg-clinica').value.trim();
+  cfg.tel     = document.getElementById('reg-tel').value.trim();
+  cfg.hcEsp   = document.getElementById('reg-hcesp').value;
+  LS.set('cfg', cfg);
+
+  // Crear usuario
+  const usuarios = [{ user, nombre, pass: btoa(pass), rol: 'admin' }];
+  LS.set(AUTH_KEY, usuarios);
+  localStorage.setItem(REG_KEY, '1');
+
+  // Cambiar a tab de login con usuario prellenado
+  authTab('login');
+  document.getElementById('login-user').value = user;
+  setTimeout(()=>document.getElementById('login-pass').focus(), 150);
+  toast('✅ Cuenta creada — ingresa tu contraseña');
+  log('🎉 Registro: '+nombre);
+}
+
+// ══════════════════════════════════════════════════════════
+// IA — ANÁLISIS DE IMÁGENES RX / ESTUDIOS
+// ══════════════════════════════════════════════════════════
+async function hcIAAnalizar(){
+  if(!hcDocPendientes.length && !document.getElementById('hc-doc-preview').children.length){
+    toast('Primero selecciona una imagen para analizar','err');
+    return;
+  }
+  // Tomar la primera imagen pendiente
+  const img = hcDocPendientes.find(d=>d.type && d.type.startsWith('image/'));
+  if(!img){
+    toast('Solo se pueden analizar imágenes (JPG, PNG) — no PDFs','err');
+    return;
+  }
+  iaAnalizar(img.data, img.cat || 'estudio de imagen médica', 'ia-panel', 'ia-loading', 'ia-resultado-content', 'ia-texto');
+}
+
+async function archIAAnalizar(archId, pacId){
+  const p = expedientes.find(x=>x.id==pacId);
+  const a = (p?.archivos||[]).find(x=>x.id==archId);
+  if(!a || !a.type.startsWith('image/')) { toast('Solo imágenes pueden analizarse con IA','err'); return; }
+  // Crear panel temporal en el lightbox
+  const panel = document.getElementById('ia-panel-lb') || crearIAPanelLightbox();
+  iaAnalizar(a.data, a.cat || 'estudio de imagen médica', 'ia-panel-lb', 'ia-loading-lb', 'ia-resultado-lb', 'ia-texto-lb');
+}
+
+function crearIAPanelLightbox(){
+  const lb = document.getElementById('arch-lightbox');
+  const panel = document.createElement('div');
+  panel.id='ia-panel-lb';
+  panel.className='ia-panel';
+  panel.style.cssText='position:absolute;bottom:20px;left:50%;transform:translateX(-50%);width:90%;max-width:600px;background:rgba(13,17,23,.95);border:1px solid rgba(46,168,224,.3);border-radius:12px;padding:14px;display:none';
+  panel.innerHTML=`
+    <div class="ia-loading" id="ia-loading-lb" style="display:none"><div class="ia-dots"><span>●</span><span>●</span><span>●</span></div><span>Analizando con IA...</span></div>
+    <div id="ia-resultado-lb" style="display:none"><div class="ia-resultado" id="ia-texto-lb"></div><div class="ia-warning">⚠️ Análisis orientativo — no reemplaza criterio clínico.</div></div>`;
+  lb.appendChild(panel);
+  return panel;
+}
+
+async function iaAnalizar(imageData, categoria, panelId, loadingId, resultId, textoId){
+  const panel = document.getElementById(panelId);
+  const loading= document.getElementById(loadingId);
+  const result = document.getElementById(resultId);
+  const texto  = document.getElementById(textoId);
+  if(!panel||!loading||!result||!texto) return;
+
+  panel.classList.add('show');
+  panel.style.display='block';
+  loading.style.display='flex';
+  result.style.display='none';
+
+  // Preparar base64 sin el prefijo data:image/...;base64,
+  const base64 = imageData.split(',')[1];
+  const mediaType = imageData.split(';')[0].split(':')[1] || 'image/jpeg';
+
+  const prompt = `Eres un radiólogo médico experto. Analiza esta imagen médica (${categoria}) y proporciona:
+
+**HALLAZGOS RADIOLÓGICOS:**
+- Describe detalladamente lo que se observa en la imagen
+- Menciona estructuras anatómicas visibles
+- Señala cualquier alteración, opacidad, lesión o hallazgo relevante
+- Indica calidad técnica de la imagen (proyección, penetración, etc.)
+
+**DIAGNÓSTICOS POSIBLES:**
+- Lista los diagnósticos más probables ordenados por probabilidad
+- Incluye diagnósticos diferenciales a considerar
+
+**RECOMENDACIONES:**
+- Sugiere estudios complementarios si aplica
+- Indica si se requiere correlación clínica específica
+
+Responde en español. Sé preciso y usa terminología médica apropiada.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    if(!response.ok){
+      const err = await response.json();
+      throw new Error(err.error?.message || 'Error de API: '+response.status);
+    }
+
+    const data = await response.json();
+    const respText = data.content?.[0]?.text || 'Sin respuesta';
+
+    // Formatear respuesta — captura variaciones de mayúsculas/minúsculas y con/sin dos puntos
+    let html = respText
+      // Secciones principales — múltiples variaciones
+      .replace(/\*{0,2}(HALLAZGOS RADIOLÓGICOS?|HALLAZGOS|Hallazgos radiológicos?|Hallazgos):?\*{0,2}/gi,
+        '<div class="ia-seccion">🔍 Hallazgos Radiológicos</div>')
+      .replace(/\*{0,2}(DIAGNÓSTICOS? POSIBLES?|DIAGNÓSTICO|Diagnósticos? posibles?|Diagnóstico diferencial):?\*{0,2}/gi,
+        '<div class="ia-seccion">🩺 Diagnósticos Posibles</div>')
+      .replace(/\*{0,2}(RECOMENDACIONES?|Recomendaciones?|CONCLUSI[OÓ]N|Conclusi[oó]n|SUGERENCIAS?):?\*{0,2}/gi,
+        '<div class="ia-seccion">📋 Recomendaciones</div>')
+      // Negritas
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Listas
+      .replace(/^\s*[-•]\s+/gm, '• ')
+      .replace(/^\s*\d+\.\s+/gm, (m) => m.trim() + ' ')
+      // Saltos de línea
+      .replace(/\n{2,}/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+
+    loading.style.display='none';
+    result.style.display='block';
+    texto.innerHTML = html;
+    log('🤖 IA analizó imagen: '+categoria);
+
+  } catch(e){
+    loading.style.display='none';
+    result.style.display='block';
+    const msg = e.message || String(e);
+    const esCORS = msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS');
+    texto.innerHTML = `<div style="color:var(--rd)">❌ ${esCORS
+      ? 'La API de Anthropic no permite llamadas directas desde el navegador (CORS).<br>Para usar el análisis IA necesitas hospedar MedSys en un servidor (GitHub Pages o similar).'
+      : 'Error al analizar: '+msg}</div>
+      <div style="color:var(--so);font-size:12px;margin-top:8px">💡 Si usas el archivo local (.html), la IA solo funciona desde GitHub Pages o un servidor web.</div>`;
+  }
+}
+
 // ══════════════════════════════════════════════════════════
 // AUTENTICACIÓN — USUARIOS
 // ══════════════════════════════════════════════════════════
@@ -5482,7 +6393,9 @@ function cambiarPassword(){
 // ══════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
   // ── Verificar sesión ──
-  if(checkSession()){
+  if(regVerificar()){
+    // Primera vez — mostrar registro
+  } else if(checkSession()){
     document.getElementById('login-screen').style.display='none';
     updateSessionUI();
   } else {
