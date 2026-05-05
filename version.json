@@ -1,12 +1,15 @@
 {
-  "version": "23.0.0",
-  "fecha": "2026-04-29",
-  "url": "https://raw.githubusercontent.com/123dioney-arch/medsys/main/index.html",
+  "version": "13.0.0",
+  "fecha": "2026-05-05",
+  "url": "https://raw.githubusercontent.com/TU_USUARIO/medsys/main/index.html",
   "notas": [
-    "💊 Dosis pediátricas: ahora muestra DOSIS BAJA y DOSIS ALTA en tarjetas separadas",
-    "🤖 IA Rx: corregido el parser — ahora muestra Recomendaciones correctamente",
-    "🔍 IA: detecta automáticamente variaciones de formato en la respuesta",
-    "⚠️ IA: mensaje claro cuando falla por CORS (archivo local vs GitHub Pages)"
+    "🎤 Dictado por voz — botón de micrófono en todos los campos de texto (motivo, hallazgos, plan, SOAP, indicaciones)",
+    "📲 Recordatorio WhatsApp — genera mensaje pre-armado con fecha, hora y consultorio desde la Agenda",
+    "💾 Backup de expedientes — exportar/importar todos los expedientes como JSON con fecha y metadatos",
+    "📊 Dashboard analítico — gráficas de consultas por mes, top diagnósticos, distribución por sexo",
+    "⚠️ Interacciones farmacológicas — 40+ pares, verificación automática al prescribir",
+    "🚨 Alertas clínicas — detecta pacientes crónicos sin seguimiento en dashboard",
+    "📋 Plantillas de consulta — 8 base + guardado de plantillas personalizadas"
   ],
   "critica": false
 }
