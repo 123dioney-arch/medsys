@@ -33,26 +33,35 @@ jobs:
           releaseBody: "Nueva versión de MedBC Pro"
           releaseDraft: false
           prerelease: false
-      - name: Find and upload latest.json
-        shell: pwsh
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $version = node -p "require('./src-tauri/tauri.conf.json').version"
-          $sigFile = Get-ChildItem -Path "." -Recurse -Filter "*.sig" | Select-Object -First 1
-          $signature = ""
-          if ($sigFile) { $signature = Get-Content $sigFile.FullName -Raw }
-          $url = "https://github.com/${{ github.repository }}/releases/download/v$version/bc-app_${version}_x64_en-US.msi"
-          $json = @{
-            version = "v$version"
-            notes = "Nueva versión de MedBC Pro"
-            pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-            platforms = @{
-              "windows-x86_64" = @{
-                url = $url
-                signature = $signature.Trim()
-              }
-            }
-          } | ConvertTo-Json -Depth 5
-          $json | Out-File -FilePath latest.json -Encoding utf8
-          gh release upload "v$version" latest.json --clobber
+     - name: Find and upload latest.json
+  shell: pwsh
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: |
+    $version = node -p "require('./src-tauri/tauri.conf.json').version"
+    $sigFile = Get-ChildItem -Path "src-tauri/target" -Recurse -Filter "*.sig" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $sigFile) {
+      $sigFile = Get-ChildItem -Path "." -Recurse -Filter "*.sig" -ErrorAction SilentlyContinue | Select-Object -First 1
+    }
+    $signature = ""
+    if ($sigFile) {
+      $signature = Get-Content $sigFile.FullName -Raw
+      Write-Host "Firma encontrada: $($sigFile.FullName)"
+    } else {
+      Write-Host "ERROR: No se encontró archivo .sig"
+      exit 1
+    }
+    $url = "https://github.com/${{ github.repository }}/releases/download/v$version/bc-app_${version}_x64_en-US.msi"
+    $json = @{
+      version = "v$version"
+      notes = "Nueva versión de MedBC Pro"
+      pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+      platforms = @{
+        "windows-x86_64" = @{
+          url = $url
+          signature = $signature.Trim()
+        }
+      }
+    } | ConvertTo-Json -Depth 5
+    $json | Out-File -FilePath latest.json -Encoding utf8
+    gh release upload "v$version" latest.json --clobber
