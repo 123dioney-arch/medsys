@@ -21,6 +21,17 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         run: npm install
+      - name: Verificar clave
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if ($env:TAURI_SIGNING_PRIVATE_KEY) {
+            Write-Host "Clave encontrada, longitud: $($env:TAURI_SIGNING_PRIVATE_KEY.Length)"
+          } else {
+            Write-Host "ERROR: Clave no encontrada"
+            exit 1
+          }
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0.5
         env:
