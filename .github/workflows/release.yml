@@ -39,10 +39,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = node -p "require('./src-tauri/tauri.conf.json').version"
-          $sigFile = Get-ChildItem -Path "src-tauri/target" -Recurse -Filter "*.sig" -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $sigFile) {
-            $sigFile = Get-ChildItem -Path "." -Recurse -Filter "*.sig" -ErrorAction SilentlyContinue | Select-Object -First 1
-          }
+          $sigFile = Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Filter "*.sig" -ErrorAction SilentlyContinue | Select-Object -First 1
           $signature = ""
           if ($sigFile) {
             $signature = Get-Content $sigFile.FullName -Raw
