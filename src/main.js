@@ -4,7 +4,9 @@ window.addEventListener("DOMContentLoaded", async () => {
     if (update) {
       const yes = confirm(`Nueva versión: ${update.version}\n¿Actualizar ahora?`);
       if (yes) {
-        await window.__TAURI_INTERNALS__.invoke("plugin:updater|download_and_install");
+        await window.__TAURI_INTERNALS__.invoke("plugin:updater|download_and_install", {
+          onEvent: null
+        });
         await window.__TAURI_INTERNALS__.invoke("plugin:process|restart");
       }
     }
