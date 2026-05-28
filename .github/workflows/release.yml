@@ -3,10 +3,9 @@ on:
   push:
     branches:
       - main
-
 jobs:
   release:
-   permissions:
+    permissions:
       contents: write
       id-token: write
       packages: write
@@ -14,18 +13,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-
       - name: Install dependencies
         run: npm install
-
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0.5
         env:
@@ -38,19 +33,15 @@ jobs:
           releaseBody: "Nueva versión de MedBC Pro"
           releaseDraft: false
           prerelease: false
-
       - name: Find and upload latest.json
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = node -p "require('./src-tauri/tauri.conf.json').version"
-          Write-Host "Looking for sig files..."
-          Get-ChildItem -Path "." -Recurse -Filter "*.sig" | ForEach-Object { Write-Host $_.FullName }
           $sigFile = Get-ChildItem -Path "." -Recurse -Filter "*.sig" | Select-Object -First 1
           $signature = ""
           if ($sigFile) { $signature = Get-Content $sigFile.FullName -Raw }
-          Write-Host "Signature: $signature"
           $url = "https://github.com/${{ github.repository }}/releases/download/v$version/bc-app_${version}_x64_en-US.msi"
           $json = @{
             version = "v$version"
