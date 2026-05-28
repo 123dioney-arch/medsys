@@ -25,7 +25,6 @@ jobs:
         run: npm install
 
       - name: Build Tauri app
-        id: tauri
         uses: tauri-apps/tauri-action@v0.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -44,9 +43,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $version = node -p "require('./src-tauri/tauri.conf.json').version"
-          $sigFile = Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Filter "*.msi.zip.sig" | Select-Object -First 1
+          $sigFile = Get-ChildItem -Path "." -Recurse -Filter "*.msi.zip.sig" | Select-Object -First 1
+          Write-Host "Sig file: $($sigFile.FullName)"
           $signature = ""
           if ($sigFile) { $signature = Get-Content $sigFile.FullName -Raw }
+          Write-Host "Signature found: $($signature.Length) chars"
           $url = "https://github.com/${{ github.repository }}/releases/download/v$version/bc-app_${version}_x64_en-US.msi"
           $json = @{
             version = "v$version"
