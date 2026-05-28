@@ -38,3 +38,4 @@ jobs:
           releaseBody: "Nueva versión de MedBC Pro"
           releaseDraft: false
           prerelease: false
+          includeUpdaterJson: true
