@@ -1,21 +1,26 @@
 const { invoke } = window.__TAURI__.core;
-const { check } = window.__TAURI__.updater;
 const { relaunch } = window.__TAURI__.process;
 
-// Verificar actualizaciones al iniciar
 window.addEventListener("DOMContentLoaded", async () => {
   try {
+    if (!window.__TAURI__?.updater?.check) {
+      alert("Updater no disponible");
+      return;
+    }
+    const { check } = window.__TAURI__.updater;
     const update = await check();
     if (update?.available) {
       const yes = confirm(
-        `Nueva versión disponible: ${update.version}\n\n${update.body}\n\n¿Deseas actualizar ahora?`
+        `Nueva versión: ${update.version}\n¿Actualizar ahora?`
       );
       if (yes) {
         await update.downloadAndInstall();
         await relaunch();
       }
+    } else {
+      alert("App al día - no hay actualizaciones");
     }
   } catch (error) {
-    console.error("Error al verificar actualizaciones:", error);
+    alert("Error: " + error.message);
   }
 });
