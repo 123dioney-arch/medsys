@@ -788,6 +788,29 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
 .alerta-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 /* DASH charts */
 #dash-chart-meses,#dash-chart-dx{display:block}
+/* ── FINANZAS ── */
+.fin-stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.fin-sc{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
+.fin-sc::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--fc,var(--ac))}
+.fin-sn{font-size:22px;font-weight:800;color:var(--tx);font-family:'DM Mono',monospace}
+.fin-sl{font-size:11px;color:var(--so);margin-top:3px}
+.fin-total-box{background:rgba(63,182,139,.1);border:2px solid rgba(63,182,139,.4);border-radius:8px;
+  padding:9px 12px;font-size:18px;font-weight:800;color:var(--ac2);font-family:'DM Mono',monospace}
+.fin-row{display:grid;gap:8px;padding:9px 0;border-bottom:1px solid rgba(48,54,61,.4);font-size:12px;align-items:center}
+.fin-row:last-child{border-bottom:none}
+.fin-row-consulta{grid-template-columns:1fr 90px 80px 80px 90px 28px}
+.fin-row-mov{grid-template-columns:80px 100px 1fr 90px 80px 70px 28px}
+.fin-badge-ing{background:rgba(63,182,139,.15);color:var(--ac2);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700}
+.fin-badge-egr{background:rgba(248,81,73,.15);color:var(--rd);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700}
+.fin-badge-cons{background:rgba(46,168,224,.15);color:var(--ac);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700}
+.fin-del-btn{background:none;border:none;color:var(--mu);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:5px;transition:color .15s}
+.fin-del-btn:hover{color:var(--rd)}
+.fin-empty{color:var(--mu);font-size:13px;padding:20px 0;text-align:center}
+.fin-th{display:grid;gap:8px;padding:6px 0;border-bottom:2px solid var(--bd);margin-bottom:4px}
+.fin-th span{font-size:10px;font-weight:700;color:var(--so);text-transform:uppercase;letter-spacing:.4px}
+@media(max-width:768px){
+  .fin-row-consulta,.fin-row-mov,.fin-th{grid-template-columns:1fr!important}
+}
 </style>
 </head>
 <body>
@@ -1170,7 +1193,7 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
   <div class="tbadge" onclick="terminarConsulta()" style="color:var(--ac2);border-color:rgba(63,182,139,.4);font-weight:700" title="Terminar consulta y limpiar todos los formularios">🏁 Terminar Consulta</div>
   <div class="tbadge" onclick="nav('importar')">📥 Importar</div>
   <div class="tbadge" onclick="nav('config')">⚙️ Config</div>
-  <div class="tbadge" onclick="doLogout()" style="color:var(--rd);border-color:rgba(248,81,73,.4)">🚪 Salir</div>
+  <div class="tbadge" id="btn-salir" onclick="doLogout()" style="color:var(--rd);border-color:rgba(248,81,73,.4)">🚪 Salir</div>
 </div>
 
 <div id="main">
@@ -1198,6 +1221,7 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
   <div class="ni" data-page="calc" onclick="nav('calc')">🧮 Calculadoras</div>
   <div class="ni" data-page="busqueda" onclick="nav('busqueda')">🔎 Búsqueda</div>
   <div class="ns">Gestión</div>
+  <div class="ni" id="sb-finanzas" data-page="finanzas" onclick="nav('finanzas');finInicializar()">💰 Finanzas</div>
   <div class="ni" data-page="resumen" onclick="nav('resumen');resInicializar()">📋 Resumen Clínico</div>
   <div class="ni" data-page="importar" onclick="nav('importar')">📥 Importar Datos</div>
   <div class="ni" data-page="config" onclick="nav('config')">⚙️ Configuración</div>
@@ -4856,13 +4880,13 @@ function toggleDxClin(inpId, listId) {
     <div class="tab active" onclick="stab('cfg','medico')">👨‍⚕️ Datos Médico</div>
     <div class="tab" onclick="stab('cfg','apariencia')">🎨 Apariencia</div>
     <div class="tab" onclick="stab('cfg','impresion')">🖨️ Impresión</div>
-    <div class="tab" onclick="stab('cfg','sistema')">🔧 Sistema</div>
-    <div class="tab" onclick="stab('cfg','nube')">☁️ Supabase</div>
-    <div class="tab" onclick="stab('cfg','backup')">💾 Respaldo</div>
-    <div class="tab" onclick="stab('cfg','actualizaciones')" id="tab-updates">🔄 Actualizaciones</div>
-    <div class="tab" onclick="stab('cfg','instalar')">📲 Instalar app</div>
-    <div class="tab" onclick="stab('cfg','legal')">⚖️ Legal</div>
-    <div class="tab" onclick="stab('cfg','auditoria');renderAuditoria()">📋 Bitácora</div>
+    <div class="tab cfg-tab-admin" onclick="stab('cfg','sistema')">🔧 Sistema</div>
+    <div class="tab cfg-tab-admin" onclick="stab('cfg','nube')">☁️ Supabase</div>
+    <div class="tab cfg-tab-admin" onclick="stab('cfg','backup')">💾 Respaldo</div>
+    <div class="tab cfg-tab-admin" onclick="stab('cfg','actualizaciones')" id="tab-updates">🔄 Actualizaciones</div>
+    <div class="tab cfg-tab-admin" onclick="stab('cfg','instalar')">📲 Instalar app</div>
+    <div class="tab cfg-tab-admin" onclick="stab('cfg','legal')">⚖️ Legal</div>
+    <div class="tab cfg-tab-admin" onclick="stab('cfg','auditoria');renderAuditoria()">📋 Bitácora</div>
   </div>
 
   <!-- Datos médico -->
@@ -5646,9 +5670,211 @@ function toggleDxClin(inpId, listId) {
     </div>
   </div><!-- /cfg-auditoria -->
 
-</div><!-- /page-config -->
+<!-- ═══════════════════════ FINANZAS ═══════════════════════ -->
+<div id="page-finanzas" class="pg">
+  <div class="ph">
+    <div class="pt">💰 Finanzas</div>
+    <div class="ps" id="fin-subtitle">Control financiero del consultorio</div>
+  </div>
+  <div id="fin-stats-wrap">
+    <div class="fin-stat-grid" id="fin-stats-grid"></div>
+  </div>
+  <div class="tab-bar" id="fin-tab-bar">
+    <div class="tab active" data-tab="registrar" onclick="finTab('registrar')">➕ Registrar</div>
+    <div class="tab fin-tab-admin" data-tab="movimientos" onclick="finTab('movimientos')">📋 Movimientos</div>
+    <div class="tab fin-tab-admin" data-tab="balance" onclick="finTab('balance')">📊 Balance</div>
+    <div class="tab fin-tab-medico" data-tab="mis-consultas" onclick="finTab('mis-consultas')">🩺 Mis Consultas</div>
+  </div>
 
-<!-- LIGHTBOX ARCHIVOS -->
+  <!-- ── TAB REGISTRAR ── -->
+  <div id="fin-tc-registrar" class="tc active">
+    <div class="card" id="fin-card-cobro-consulta" style="border-left:4px solid var(--ac2)">
+      <div class="ct" style="color:var(--ac2)">🩺 Cobro de Consulta</div>
+      <div class="fr">
+        <div class="fg"><label class="lbl">Paciente</label>
+          <input class="inp" id="fin-pac-nombre" placeholder="Nombre del paciente" list="fin-pac-list">
+          <datalist id="fin-pac-list"></datalist>
+        </div>
+        <div class="fg"><label class="lbl">Tipo de consulta</label>
+          <select class="inp" id="fin-tipo-consulta">
+            <option value="primera">Primera vez</option>
+            <option value="subsecuente">Subsecuente</option>
+            <option value="urgencia">Urgencia</option>
+            <option value="procedimiento">Procedimiento</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="fg"><label class="lbl">Monto cobrado ($)</label>
+          <input class="inp" id="fin-monto-consulta" type="number" min="0" step="0.01" placeholder="0.00" oninput="finCalcularTotal()">
+        </div>
+        <div class="fg"><label class="lbl">Descuento ($)</label>
+          <input class="inp" id="fin-descuento" type="number" min="0" step="0.01" placeholder="0.00" oninput="finCalcularTotal()">
+        </div>
+        <div class="fg"><label class="lbl">% Descuento</label>
+          <input class="inp" id="fin-descuento-pct" type="number" min="0" max="100" step="1" placeholder="0" oninput="finCalcularPctDescuento()">
+        </div>
+        <div class="fg"><label class="lbl">Total a pagar</label>
+          <div id="fin-total-display" class="fin-total-box">$0.00</div>
+        </div>
+        <div class="fg"><label class="lbl">Motivo descuento</label>
+          <input class="inp" id="fin-motivo-desc" placeholder="Ej: adulto mayor, paciente preferente...">
+        </div>
+        <div class="fg"><label class="lbl">Forma de pago</label>
+          <select class="inp" id="fin-forma-pago-consulta">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="tarjeta">💳 Tarjeta</option>
+            <option value="transferencia">📲 Transferencia</option>
+            <option value="cheque">🏦 Cheque</option>
+          </select>
+        </div>
+        <div class="fg"><label class="lbl">Médico</label>
+          <input class="inp" id="fin-medico-cobro" placeholder="Médico" readonly style="background:var(--card)">
+        </div>
+        <div class="fg"><label class="lbl">Fecha</label>
+          <input class="inp" type="date" id="fin-fecha-consulta">
+        </div>
+        <div class="fg"><label class="lbl">Notas</label>
+          <input class="inp" id="fin-notas-consulta" placeholder="Observaciones opcionales">
+        </div>
+      </div>
+      <button class="pill pg2" onclick="finRegistrarConsulta()">✅ Registrar cobro</button>
+    </div>
+
+    <div class="card" style="border-left:4px solid var(--ac)">
+      <div class="ct" style="color:var(--ac)">💵 Ingreso General</div>
+      <div class="fr">
+        <div class="fg"><label class="lbl">Concepto</label>
+          <input class="inp" id="fin-ingreso-concepto" placeholder="Ej: venta de insumos, renta...">
+        </div>
+        <div class="fg"><label class="lbl">Monto ($)</label>
+          <input class="inp" id="fin-ingreso-monto" type="number" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="fg"><label class="lbl">Forma de pago</label>
+          <select class="inp" id="fin-ingreso-forma">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="tarjeta">💳 Tarjeta</option>
+            <option value="transferencia">📲 Transferencia</option>
+            <option value="cheque">🏦 Cheque</option>
+          </select>
+        </div>
+        <div class="fg"><label class="lbl">Fecha</label>
+          <input class="inp" type="date" id="fin-ingreso-fecha">
+        </div>
+        <div class="fg"><label class="lbl">Notas</label>
+          <input class="inp" id="fin-ingreso-notas" placeholder="Opcional">
+        </div>
+      </div>
+      <button class="pill pb" onclick="finRegistrarIngreso()">✅ Registrar ingreso</button>
+    </div>
+
+    <div class="card" style="border-left:4px solid var(--rd)">
+      <div class="ct" style="color:var(--rd)">📤 Gasto / Egreso</div>
+      <div class="fr">
+        <div class="fg"><label class="lbl">Concepto</label>
+          <input class="inp" id="fin-egreso-concepto" placeholder="Ej: renta, insumos, servicios...">
+        </div>
+        <div class="fg"><label class="lbl">Categoría</label>
+          <select class="inp" id="fin-egreso-cat">
+            <option value="renta">🏠 Renta</option>
+            <option value="insumos">💊 Insumos / Medicamentos</option>
+            <option value="servicios">💡 Servicios (luz, agua, internet)</option>
+            <option value="equipamiento">🛠️ Equipamiento</option>
+            <option value="personal">👔 Personal / Nómina</option>
+            <option value="publicidad">📢 Publicidad</option>
+            <option value="otros">📦 Otros</option>
+          </select>
+        </div>
+        <div class="fg"><label class="lbl">Monto ($)</label>
+          <input class="inp" id="fin-egreso-monto" type="number" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="fg"><label class="lbl">Forma de pago</label>
+          <select class="inp" id="fin-egreso-forma">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="tarjeta">💳 Tarjeta</option>
+            <option value="transferencia">📲 Transferencia</option>
+            <option value="cheque">🏦 Cheque</option>
+          </select>
+        </div>
+        <div class="fg"><label class="lbl">Fecha</label>
+          <input class="inp" type="date" id="fin-egreso-fecha">
+        </div>
+        <div class="fg"><label class="lbl">Notas</label>
+          <input class="inp" id="fin-egreso-notas" placeholder="Opcional">
+        </div>
+      </div>
+      <button class="pill pr2" onclick="finRegistrarEgreso()">✅ Registrar gasto</button>
+    </div>
+  </div><!-- /fin-tc-registrar -->
+
+  <!-- ── TAB MOVIMIENTOS ── -->
+  <div id="fin-tc-movimientos" class="tc">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+        <div class="ct" style="margin-bottom:0;flex:1">📋 Todos los Movimientos</div>
+        <select class="inp" id="fin-fil-tipo" onchange="finRenderMovimientos()" style="width:160px">
+          <option value="todos">Todos</option>
+          <option value="consulta">Consultas</option>
+          <option value="ingreso">Ingresos</option>
+          <option value="egreso">Gastos</option>
+        </select>
+        <select class="inp" id="fin-fil-mes" onchange="finRenderMovimientos()" style="width:140px"></select>
+        <button class="pill pb" onclick="finExportarCSV()">⬇ Exportar CSV</button>
+      </div>
+      <div id="fin-movimientos-table"></div>
+    </div>
+  </div>
+
+  <!-- ── TAB BALANCE ── -->
+  <div id="fin-tc-balance" class="tc">
+    <div class="card">
+      <div class="ct">📊 Balance Mensual / Anual</div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <select class="inp" id="fin-bal-anio" onchange="finRenderBalance()" style="width:120px"></select>
+        <select class="inp" id="fin-bal-mes" onchange="finRenderBalance()" style="width:140px">
+          <option value="todos">Todo el año</option>
+          <option value="1">Enero</option><option value="2">Febrero</option>
+          <option value="3">Marzo</option><option value="4">Abril</option>
+          <option value="5">Mayo</option><option value="6">Junio</option>
+          <option value="7">Julio</option><option value="8">Agosto</option>
+          <option value="9">Septiembre</option><option value="10">Octubre</option>
+          <option value="11">Noviembre</option><option value="12">Diciembre</option>
+        </select>
+      </div>
+      <div class="fin-stat-grid" id="fin-bal-cards"></div>
+      <div style="margin-top:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--so);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📈 Ingresos vs Egresos por mes</div>
+        <canvas id="fin-chart-balance" height="200" style="width:100%"></canvas>
+      </div>
+      <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--so);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">🥧 Egresos por categoría</div>
+          <canvas id="fin-chart-cat" height="180"></canvas>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--so);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">💳 Formas de pago (ingresos)</div>
+          <canvas id="fin-chart-forma" height="180"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB MIS CONSULTAS ── -->
+  <div id="fin-tc-mis-consultas" class="tc">
+    <div class="card">
+      <div class="ct">🩺 Mis Consultas Registradas</div>
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <select class="inp" id="fin-mc-mes" onchange="finRenderMisConsultas()" style="width:140px"></select>
+        <select class="inp" id="fin-mc-anio" onchange="finRenderMisConsultas()" style="width:120px"></select>
+      </div>
+      <div id="fin-mis-consultas-stats" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <div id="fin-mis-consultas-table"></div>
+    </div>
+  </div>
+
+</div><!-- /page-finanzas -->
+
+</div><!-- /ct -->
+
 <div id="arch-lightbox" onclick="if(event.target===this){this.classList.remove('open');const f=document.getElementById('_lb_pdf_frame');if(f){f.style.display='none';f.src='';}}">
   <button id="arch-lb-close" onclick="document.getElementById('arch-lightbox').classList.remove('open');const f=document.getElementById('_lb_pdf_frame');if(f){f.style.display='none';f.src=''}">✕</button>
   <img id="arch-lb-img" src="" alt="Imagen del estudio">
@@ -5845,9 +6071,9 @@ const allGAB=()=>[...GAB_BASE,...cGab];
 function nav(page){navStack.push(curPage);showPage(page);}
 // ══ PERMISOS POR ROL ══
 const ROL_PERMISOS = {
-  admin:     ['dashboard','agenda','expediente','paciente','receta','cert','estudios','ia-dx','gpc','catalogo','ped','calc','busqueda','importar','config','legal','misdatos'],
-  medico:    ['dashboard','agenda','expediente','paciente','receta','cert','estudios','ia-dx','gpc','catalogo','ped','calc','busqueda','legal','misdatos'],
-  recepcion: ['dashboard','agenda','expediente','busqueda']
+  admin:     ['dashboard','agenda','expediente','paciente','receta','cert','estudios','ia-dx','gpc','catalogo','ped','calc','busqueda','importar','config','legal','misdatos','finanzas'],
+  medico:    ['dashboard','agenda','expediente','paciente','receta','cert','estudios','ia-dx','gpc','catalogo','ped','calc','busqueda','legal','misdatos','finanzas','config'],
+  recepcion: ['agenda','busqueda','finanzas']
 };
 function rolPuedeVer(page){
   const rol = sessionUser?.rol||'recepcion';
@@ -5868,6 +6094,51 @@ function aplicarPermisosSidebar(){
     }
     ns.style.display = tieneVisible ? '' : 'none';
   });
+}
+
+// ══ MODO RECEPCIÓN — oculta todo excepto agenda ══
+function aplicarModoRecepcion(){
+  if(!sessionUser || sessionUser.rol !== 'recepcion') return;
+  // Ocultar sidebar completamente
+  const sb = document.getElementById('sb');
+  if(sb) sb.style.display='none';
+  // Ocultar botón hamburger móvil
+  const ham = document.getElementById('hamburger-btn');
+  if(ham) ham.style.display='none';
+  // Ocultar búsqueda global y status nube
+  ['gsearch','sb-status'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; });
+  // Ocultar todos los tbadge del topbar EXCEPTO: reloj, nombre de usuario y botón Salir
+  document.querySelectorAll('#top .tbadge').forEach(el=>{
+    const id = el.id;
+    if(id==='badge-usuario' || id==='clock' || id==='btn-salir') return;
+    el.style.display='none';
+  });
+  // Expandir área de contenido al ancho completo
+  document.documentElement.style.setProperty('--W','0px');
+  // Badge de modo recepción (solo si no existe ya)
+  const top = document.getElementById('top');
+  if(top && !document.getElementById('recep-badge')){
+    const badge = document.createElement('div');
+    badge.id = 'recep-badge';
+    badge.style.cssText='background:rgba(63,182,139,.15);border:1px solid rgba(63,182,139,.4);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;color:var(--ac2);white-space:nowrap;';
+    badge.textContent='📅 Recepción';
+    top.insertBefore(badge, top.querySelector('.sp'));
+    // Botones de navegación para recepción
+    const navAgenda = document.createElement('div');
+    navAgenda.id='recep-nav-agenda';
+    navAgenda.className='tbadge';
+    navAgenda.style.cssText='cursor:pointer;';
+    navAgenda.textContent='📅 Agenda';
+    navAgenda.onclick=()=>nav('agenda');
+    top.insertBefore(navAgenda, top.querySelector('.sp').nextSibling);
+    const navFin = document.createElement('div');
+    navFin.id='recep-nav-fin';
+    navFin.className='tbadge';
+    navFin.style.cssText='cursor:pointer;';
+    navFin.textContent='💰 Finanzas';
+    navFin.onclick=()=>{ nav('finanzas'); if(typeof finInicializar==='function') finInicializar(); };
+    top.insertBefore(navFin, top.querySelector('.sp').nextSibling);
+  }
 }
 
 function showPage(page){
@@ -5900,10 +6171,16 @@ function showPage(page){
         if(oc.includes("'medico'")) t.classList.add('active');
       }
     });
+  } else {
+    // Mostrar/ocultar pestañas de config según rol
+    const rolCfg = sessionUser?.rol || 'recepcion';
+    document.querySelectorAll('.cfg-tab-admin').forEach(t => {
+      t.style.display = (rolCfg === 'admin') ? '' : 'none';
+    });
   }
-  bc([{l:'🏠',a:"nav('dashboard')"}]);
-  // Botón 🏠 en el header de cada página (excepto dashboard)
-  if(page !== 'dashboard'){
+  if(sessionUser?.rol !== 'recepcion') bc([{l:'🏠',a:"nav('dashboard')"}]);
+  // Botón 🏠 en el header de cada página (excepto dashboard) — oculto para recepción
+  if(page !== 'dashboard' && sessionUser?.rol !== 'recepcion'){
     setTimeout(()=>{
       const activePg = document.getElementById('page-'+page);
       if(!activePg) return;
@@ -10905,9 +11182,13 @@ function loginContinuar(){
   loadCfgIntoForm();
   setTimeout(()=>{ initLogoFromCfg(); loadFmtFromCfg(); }, 100);
   document.getElementById('login-screen').style.display='none';
+  // Resetear scroll del sidebar al tope
+  const sbElAuto = document.getElementById('sb');
+  if(sbElAuto) sbElAuto.scrollTop = 0;
   updateSessionUI();
   aplicarPermisosSidebar();
-  showPage('dashboard');
+  showPage(found.rol==='recepcion' ? 'agenda' : 'dashboard');
+  if(found.rol==='recepcion') setTimeout(()=>aplicarModoRecepcion(),150);
   if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false),150);
   toast('✅ Bienvenido, '+found.nombre);
   log('🔐 Sesión continuada: '+found.nombre);
@@ -11371,9 +11652,13 @@ function doLogin(){
       document.getElementById('login-screen').style.display='none';
       document.getElementById('login-pass').value='';
       document.getElementById('login-user').value='';
+      // Resetear scroll del sidebar al tope
+      const sbEl = document.getElementById('sb');
+      if(sbEl) sbEl.scrollTop = 0;
       updateSessionUI();
       aplicarPermisosSidebar();
-      showPage('dashboard');
+      showPage(found.rol==='recepcion' ? 'agenda' : 'dashboard');
+      if(found.rol==='recepcion') setTimeout(()=>aplicarModoRecepcion(),150);
       if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false),150);
       toast('✅ Bienvenido, '+found.nombre);
       log('🔐 Sesión iniciada: '+found.nombre+' ('+found.rol+')');
@@ -11443,6 +11728,9 @@ function _confirmarLogout(){
     el.style.display='';
   });
   document.querySelectorAll('.ns').forEach(el=>el.style.display='');
+  // Resetear scroll del sidebar al tope
+  const sbEl = document.getElementById('sb');
+  if(sbEl) sbEl.scrollTop = 0;
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-user').value='';
   document.getElementById('login-pass').value='';
@@ -16082,6 +16370,19 @@ function _confirmarLogout(){
   cfg = {}; rxLogoDataURL=null; rxLogo2DataURL=null;
   sessionUser=null;
   LS.del(SESSION_KEY);
+  // Limpiar elementos del modo recepción para que el próximo usuario vea la UI normal
+  const recepBadge = document.getElementById('recep-badge');
+  if(recepBadge) recepBadge.remove();
+  ['recep-nav-agenda','recep-nav-fin'].forEach(id=>{ const el=document.getElementById(id); if(el) el.remove(); });
+  const sb = document.getElementById('sb');
+  if(sb){ sb.style.display=''; sb.scrollTop=0; }
+  document.documentElement.style.setProperty('--W','188px');
+  // Restaurar badges del topbar excepto los que tienen visibilidad propia
+  document.querySelectorAll('#top .tbadge, #gsearch').forEach(el=>{
+    if(el.id==='pwa-install-btn' || el.id==='hamburger-btn') return;
+    el.style.display='';
+  });
+  // hamburger solo visible en móvil (CSS lo controla), no forzar display aquí
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('login-user').value='';
   document.getElementById('login-pass').value='';
@@ -18206,5 +18507,360 @@ function marcarInviteUsado(code){
   saveInvites(invites);
 }
 </script>
+
+<!-- ══════════════════════════════════════════════════════════
+  MÓDULO FINANZAS · MedBC Pro
+══════════════════════════════════════════════════════════ -->
+<script>
+const FIN_KEY = 'medbc_finanzas';
+function finGet(){ return LS.get(FIN_KEY, []); }
+function finSave(arr){ LS.set(FIN_KEY, arr); }
+function finUID(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function finInicializar(){
+  const su = (typeof sessionUser !== 'undefined') ? sessionUser : null;
+  const rol = su?.rol || 'recepcion';
+
+  const subMap = {admin:'Vista completa · Admin', medico:'Tus consultas y balance', recepcion:'Registro de cobros y gastos'};
+  const subEl = document.getElementById('fin-subtitle');
+  if(subEl) subEl.textContent = subMap[rol] || '';
+
+  // Mostrar/ocultar pestañas según rol
+  document.querySelectorAll('.fin-tab-admin').forEach(t => { t.style.display = (rol==='admin') ? '' : 'none'; });
+  document.querySelectorAll('.fin-tab-medico').forEach(t => { t.style.display = (rol==='medico'||rol==='admin') ? '' : 'none'; });
+
+  // Stats ocultas para recepción
+  const sw = document.getElementById('fin-stats-wrap');
+  if(sw) sw.style.display = (rol==='recepcion') ? 'none' : '';
+
+  // Cobro de Consulta: siempre visible, pero médico editable solo para recepcion
+  const cobro = document.getElementById('fin-card-cobro-consulta');
+  if(cobro) cobro.style.display = '';
+
+  // Fechas por defecto
+  const hoy = new Date().toISOString().slice(0,10);
+  ['fin-fecha-consulta','fin-ingreso-fecha','fin-egreso-fecha'].forEach(id => {
+    const el = document.getElementById(id); if(el && !el.value) el.value = hoy;
+  });
+
+  // Auto-llenar médico
+  const medEl = document.getElementById('fin-medico-cobro');
+  if(medEl && su) {
+    if(rol === 'recepcion') {
+      // Recepcion: reemplazar input por select con lista de médicos
+      const medicos = getUsuarios().filter(u => u.rol === 'medico' || u.rol === 'admin');
+      const sel = document.createElement('select');
+      sel.className = 'inp';
+      sel.id = 'fin-medico-cobro';
+      sel.style.background = 'var(--card)';
+      sel.innerHTML = '<option value="">— Seleccionar médico —</option>' +
+        medicos.map(m => `<option value="${m.nombre||m.user}">${m.nombre||m.user}</option>`).join('');
+      medEl.replaceWith(sel);
+    } else {
+      // Medico/Admin: auto-llenar con su nombre, solo lectura
+      medEl.value = su.nombre || su.usuario || '';
+      medEl.readOnly = true;
+      medEl.style.background = 'var(--card)';
+    }
+  }
+
+  finLlenarPacientes();
+  if(rol !== 'recepcion') finRenderStats();
+  finPoblarFiltrosMeses();
+  finTab('registrar');
+  if(rol === 'admin') setTimeout(finRenderBalance, 100);
+  if(rol === 'medico') setTimeout(finRenderMisConsultas, 100);
+}
+
+function finLlenarPacientes(){
+  const dl = document.getElementById('fin-pac-list');
+  if(!dl) return;
+  const exps = (typeof expedientes !== 'undefined') ? expedientes : [];
+  dl.innerHTML = exps.map(p => `<option value="${p.nombre||''}">`).join('');
+}
+
+function finCalcularTotal(){
+  const monto = parseFloat(document.getElementById('fin-monto-consulta')?.value) || 0;
+  const desc  = parseFloat(document.getElementById('fin-descuento')?.value) || 0;
+  const total = Math.max(0, monto - desc);
+  const pctEl = document.getElementById('fin-descuento-pct');
+  if(pctEl && monto > 0) pctEl.value = ((desc/monto)*100).toFixed(1);
+  const el = document.getElementById('fin-total-display');
+  if(el) el.textContent = '$' + total.toFixed(2);
+}
+
+function finCalcularPctDescuento(){
+  const monto = parseFloat(document.getElementById('fin-monto-consulta')?.value) || 0;
+  const pct   = parseFloat(document.getElementById('fin-descuento-pct')?.value) || 0;
+  const desc  = (monto * pct / 100);
+  const descEl = document.getElementById('fin-descuento');
+  if(descEl) descEl.value = desc.toFixed(2);
+  finCalcularTotal();
+}
+
+function finTab(tab){
+  document.querySelectorAll('#fin-tab-bar .tab').forEach(t => t.classList.toggle('active', t.dataset.tab===tab));
+  document.querySelectorAll('[id^="fin-tc-"]').forEach(t => t.classList.toggle('active', t.id==='fin-tc-'+tab));
+  const su = (typeof sessionUser !== 'undefined') ? sessionUser : null;
+  const rol = su?.rol || 'recepcion';
+  if(tab==='movimientos') finRenderMovimientos();
+  if(tab==='balance' && rol==='admin') finRenderBalance();
+  if(tab==='mis-consultas') finRenderMisConsultas();
+}
+
+function finRegistrarConsulta(){
+  const monto    = parseFloat(document.getElementById('fin-monto-consulta')?.value) || 0;
+  const descuento= parseFloat(document.getElementById('fin-descuento')?.value) || 0;
+  const total    = Math.max(0, monto - descuento);
+  const pac      = document.getElementById('fin-pac-nombre')?.value.trim() || '';
+  const tipo     = document.getElementById('fin-tipo-consulta')?.value || 'primera';
+  const forma    = document.getElementById('fin-forma-pago-consulta')?.value || 'efectivo';
+  const medico   = document.getElementById('fin-medico-cobro')?.value.trim() || '';
+  const fecha    = document.getElementById('fin-fecha-consulta')?.value || new Date().toISOString().slice(0,10);
+  const notas    = document.getElementById('fin-notas-consulta')?.value.trim() || '';
+  const motivoDesc = document.getElementById('fin-motivo-desc')?.value.trim() || '';
+  if(!pac){ toast('⚠️ Ingresa el nombre del paciente','err'); return; }
+  if(!monto){ toast('⚠️ Ingresa el monto de la consulta','err'); return; }
+  const su = (typeof sessionUser !== 'undefined') ? sessionUser : null;
+  const reg = { id:finUID(), tipo:'consulta', paciente:pac, tipoConsulta:tipo, monto, descuento,
+    pctDescuento: monto>0?+((descuento/monto)*100).toFixed(1):0, motivoDesc, total, formaPago:forma,
+    medico: medico||(su?.nombre||su?.usuario||''), medicoId: su?.usuario||'',
+    fecha, notas, creadoPor:su?.usuario||'', creadoEn:new Date().toLocaleString('es-MX') };
+  const arr = finGet(); arr.push(reg); finSave(arr);
+  finLimpiarConsulta(); finRenderStats();
+  toast('✅ Cobro registrado — $' + total.toFixed(2));
+  if(typeof logActividad==='function') logActividad(`💰 Cobro: ${pac} · $${total.toFixed(2)}`);
+}
+
+function finLimpiarConsulta(){
+  ['fin-pac-nombre','fin-monto-consulta','fin-descuento','fin-descuento-pct','fin-notas-consulta','fin-motivo-desc'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
+  const td=document.getElementById('fin-total-display'); if(td) td.textContent='$0.00';
+}
+
+function finRegistrarIngreso(){
+  const concepto = document.getElementById('fin-ingreso-concepto')?.value.trim()||'';
+  const monto    = parseFloat(document.getElementById('fin-ingreso-monto')?.value)||0;
+  const forma    = document.getElementById('fin-ingreso-forma')?.value||'efectivo';
+  const fecha    = document.getElementById('fin-ingreso-fecha')?.value||new Date().toISOString().slice(0,10);
+  const notas    = document.getElementById('fin-ingreso-notas')?.value.trim()||'';
+  if(!concepto){ toast('⚠️ Escribe el concepto del ingreso','err'); return; }
+  if(!monto){ toast('⚠️ Ingresa el monto','err'); return; }
+  const su = (typeof sessionUser!=='undefined') ? sessionUser : null;
+  const reg = { id:finUID(), tipo:'ingreso', concepto, monto, total:monto, formaPago:forma,
+    fecha, notas, creadoPor:su?.usuario||'', creadoEn:new Date().toLocaleString('es-MX') };
+  const arr = finGet(); arr.push(reg); finSave(arr);
+  ['fin-ingreso-concepto','fin-ingreso-monto','fin-ingreso-notas'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  finRenderStats();
+  toast('✅ Ingreso registrado — $' + monto.toFixed(2));
+}
+
+function finRegistrarEgreso(){
+  const concepto  = document.getElementById('fin-egreso-concepto')?.value.trim()||'';
+  const categoria = document.getElementById('fin-egreso-cat')?.value||'otros';
+  const monto     = parseFloat(document.getElementById('fin-egreso-monto')?.value)||0;
+  const forma     = document.getElementById('fin-egreso-forma')?.value||'efectivo';
+  const fecha     = document.getElementById('fin-egreso-fecha')?.value||new Date().toISOString().slice(0,10);
+  const notas     = document.getElementById('fin-egreso-notas')?.value.trim()||'';
+  if(!concepto){ toast('⚠️ Escribe el concepto del gasto','err'); return; }
+  if(!monto){ toast('⚠️ Ingresa el monto','err'); return; }
+  const su = (typeof sessionUser!=='undefined') ? sessionUser : null;
+  const reg = { id:finUID(), tipo:'egreso', concepto, categoria, monto, total:monto, formaPago:forma,
+    fecha, notas, creadoPor:su?.usuario||'', creadoEn:new Date().toLocaleString('es-MX') };
+  const arr = finGet(); arr.push(reg); finSave(arr);
+  ['fin-egreso-concepto','fin-egreso-monto','fin-egreso-notas'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  finRenderStats();
+  toast('✅ Gasto registrado — $' + monto.toFixed(2));
+}
+
+function finEliminar(id){
+  const su = (typeof sessionUser!=='undefined') ? sessionUser : null;
+  if(su?.rol!=='admin'){ toast('Solo el administrador puede eliminar registros','err'); return; }
+  if(!confirm('¿Eliminar este registro? No se puede deshacer.')) return;
+  finSave(finGet().filter(r=>r.id!==id));
+  finRenderMovimientos(); finRenderStats();
+  toast('🗑️ Registro eliminado');
+}
+
+function finRenderStats(){
+  const el = document.getElementById('fin-stats-grid'); if(!el) return;
+  const arr = finGet();
+  const hoy = new Date();
+  const mes = hoy.getMonth()+1, anio = hoy.getFullYear();
+  const esMes = r => { const d=new Date(r.fecha); return d.getMonth()+1===mes && d.getFullYear()===anio; };
+  const ingMes  = arr.filter(r=>(r.tipo==='consulta'||r.tipo==='ingreso')&&esMes(r)).reduce((s,r)=>s+(r.total||0),0);
+  const egrMes  = arr.filter(r=>r.tipo==='egreso'&&esMes(r)).reduce((s,r)=>s+(r.total||0),0);
+  const balMes  = ingMes - egrMes;
+  const consHoy = arr.filter(r=>r.tipo==='consulta'&&r.fecha===hoy.toISOString().slice(0,10)).length;
+  const fmt = n => '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  el.innerHTML = `
+    <div class="fin-sc" style="--fc:var(--ac2)"><div class="fin-sn">${fmt(ingMes)}</div><div class="fin-sl">💵 Ingresos del mes</div></div>
+    <div class="fin-sc" style="--fc:var(--rd)"><div class="fin-sn">${fmt(egrMes)}</div><div class="fin-sl">📤 Egresos del mes</div></div>
+    <div class="fin-sc" style="--fc:${balMes>=0?'var(--ac2)':'var(--rd)'}"><div class="fin-sn" style="color:${balMes>=0?'var(--ac2)':'var(--rd)'}">${fmt(balMes)}</div><div class="fin-sl">📊 Balance del mes</div></div>
+    <div class="fin-sc" style="--fc:var(--ac)"><div class="fin-sn">${consHoy}</div><div class="fin-sl">🩺 Consultas hoy</div></div>`;
+}
+
+function finPoblarFiltrosMeses(){
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const hoy=new Date(); const mesAct=hoy.getMonth()+1; const anioAct=hoy.getFullYear();
+  const optsMeses = '<option value="todos">Todos los meses</option>'+meses.map((m,i)=>`<option value="${i+1}" ${i+1===mesAct?'selected':''}>${m}</option>`).join('');
+  let optsAnios=''; for(let y=anioAct;y>=anioAct-4;y--) optsAnios+=`<option value="${y}" ${y===anioAct?'selected':''}>${y}</option>`;
+  ['fin-fil-mes','fin-mc-mes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=optsMeses; });
+  ['fin-bal-anio','fin-mc-anio'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=optsAnios; });
+}
+
+function finRenderMovimientos(){
+  const el = document.getElementById('fin-movimientos-table'); if(!el) return;
+  const su = (typeof sessionUser!=='undefined') ? sessionUser : null;
+  const esAdmin = su?.rol==='admin';
+  let arr = finGet();
+  const ft = document.getElementById('fin-fil-tipo')?.value||'todos';
+  const fm = document.getElementById('fin-fil-mes')?.value||'todos';
+  if(ft!=='todos') arr=arr.filter(r=>r.tipo===ft);
+  if(fm!=='todos') arr=arr.filter(r=>(new Date(r.fecha).getMonth()+1)===parseInt(fm));
+  arr=arr.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  if(!arr.length){ el.innerHTML='<div class="fin-empty">Sin registros para los filtros seleccionados.</div>'; return; }
+  const totalIng=arr.filter(r=>r.tipo!=='egreso').reduce((s,r)=>s+(r.total||0),0);
+  const totalEgr=arr.filter(r=>r.tipo==='egreso').reduce((s,r)=>s+(r.total||0),0);
+  const fmt=n=>'$'+n.toLocaleString('es-MX',{minimumFractionDigits:2});
+  const formaL={efectivo:'💵 Efectivo',tarjeta:'💳 Tarjeta',transferencia:'📲 Transferencia',cheque:'🏦 Cheque'};
+  el.innerHTML = `
+    <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="background:rgba(63,182,139,.1);border:1px solid rgba(63,182,139,.3);border-radius:8px;padding:8px 14px;font-size:12px"><span style="color:var(--so)">Ingresos:</span> <strong style="color:var(--ac2)">${fmt(totalIng)}</strong></div>
+      <div style="background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);border-radius:8px;padding:8px 14px;font-size:12px"><span style="color:var(--so)">Egresos:</span> <strong style="color:var(--rd)">${fmt(totalEgr)}</strong></div>
+      <div style="background:rgba(46,168,224,.1);border:1px solid rgba(46,168,224,.3);border-radius:8px;padding:8px 14px;font-size:12px"><span style="color:var(--so)">Balance:</span> <strong style="color:${totalIng-totalEgr>=0?'var(--ac2)':'var(--rd)'}">${fmt(totalIng-totalEgr)}</strong></div>
+    </div>
+    <div class="fin-th fin-row-mov"><span>Fecha</span><span>Tipo</span><span>Concepto / Paciente</span><span>Forma pago</span><span style="text-align:right">Monto</span><span style="text-align:right">Total</span><span></span></div>
+    ${arr.map(r=>{
+      const bc=r.tipo==='egreso'?'fin-badge-egr':r.tipo==='consulta'?'fin-badge-cons':'fin-badge-ing';
+      const bt=r.tipo==='egreso'?'GASTO':r.tipo==='consulta'?'CONSULTA':'INGRESO';
+      const con=r.tipo==='consulta'?`${r.paciente} (${r.tipoConsulta||'consulta'})`:r.concepto;
+      const dsc=r.descuento>0?`<br><span style="font-size:10px;color:var(--am)">Dto: -$${r.descuento.toFixed(2)}${r.motivoDesc?' · '+r.motivoDesc:''}</span>`:'';
+      return `<div class="fin-row fin-row-mov">
+        <span style="color:var(--so)">${r.fecha}</span>
+        <span><span class="${bc}">${bt}</span></span>
+        <span>${con}${dsc}${r.medico?`<br><span style='font-size:10px;color:var(--mu)'>👨‍⚕️ ${r.medico}</span>`:''}</span>
+        <span style="color:var(--so)">${formaL[r.formaPago]||r.formaPago||'—'}</span>
+        <span style="text-align:right;font-family:'DM Mono',monospace">$${(r.monto||r.total||0).toFixed(2)}</span>
+        <span style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${r.tipo==='egreso'?'var(--rd)':'var(--ac2)'}">$${(r.total||0).toFixed(2)}</span>
+        ${esAdmin?`<button class="fin-del-btn" onclick="finEliminar('${r.id}')" title="Eliminar">🗑️</button>`:'<span></span>'}
+      </div>`;
+    }).join('')}`;
+}
+
+function finRenderBalance(){
+  const su=(typeof sessionUser!=='undefined')?sessionUser:null;
+  if(su?.rol!=='admin') return;
+  const anio=parseInt(document.getElementById('fin-bal-anio')?.value)||new Date().getFullYear();
+  const mesF=document.getElementById('fin-bal-mes')?.value||'todos';
+  let arr=finGet().filter(r=>new Date(r.fecha).getFullYear()===anio);
+  if(mesF!=='todos') arr=arr.filter(r=>new Date(r.fecha).getMonth()+1===parseInt(mesF));
+  const totalIng=arr.filter(r=>r.tipo!=='egreso').reduce((s,r)=>s+(r.total||0),0);
+  const totalEgr=arr.filter(r=>r.tipo==='egreso').reduce((s,r)=>s+(r.total||0),0);
+  const balance=totalIng-totalEgr;
+  const fmt=n=>'$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const cards=document.getElementById('fin-bal-cards');
+  if(cards) cards.innerHTML=`
+    <div class="fin-sc" style="--fc:var(--ac2)"><div class="fin-sn">${fmt(totalIng)}</div><div class="fin-sl">💵 Total ingresos</div></div>
+    <div class="fin-sc" style="--fc:var(--rd)"><div class="fin-sn">${fmt(totalEgr)}</div><div class="fin-sl">📤 Total egresos</div></div>
+    <div class="fin-sc" style="--fc:${balance>=0?'var(--ac2)':'var(--rd)'}"><div class="fin-sn" style="color:${balance>=0?'var(--ac2)':'var(--rd)'}">${fmt(balance)}</div><div class="fin-sl">📊 Balance neto</div></div>
+    <div class="fin-sc" style="--fc:var(--ac)"><div class="fin-sn">${arr.filter(r=>r.tipo==='consulta').length}</div><div class="fin-sl">🩺 Consultas</div></div>`;
+  finRenderChartBalance(anio);
+  finRenderChartCat(arr);
+  finRenderChartForma(arr);
+}
+
+function finRenderChartBalance(anio){
+  const canvas=document.getElementById('fin-chart-balance');
+  if(!canvas||typeof Chart==='undefined') return;
+  if(canvas._ci){canvas._ci.destroy();canvas._ci=null;}
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const arr=finGet().filter(r=>new Date(r.fecha).getFullYear()===anio);
+  const ing=Array(12).fill(0), egr=Array(12).fill(0);
+  arr.forEach(r=>{ const m=new Date(r.fecha).getMonth(); r.tipo!=='egreso'?ing[m]+=(r.total||0):egr[m]+=(r.total||0); });
+  canvas._ci=new Chart(canvas,{type:'bar',data:{labels:meses,datasets:[
+    {label:'Ingresos',data:ing,backgroundColor:'rgba(63,182,139,.7)',borderRadius:4},
+    {label:'Egresos', data:egr,backgroundColor:'rgba(248,81,73,.6)', borderRadius:4}
+  ]},options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#8B949E',font:{size:11}}}},
+    scales:{x:{ticks:{color:'#8B949E',font:{size:11}},grid:{color:'rgba(48,54,61,.5)'}},
+            y:{ticks:{color:'#8B949E',font:{size:11},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(48,54,61,.5)'}}}}});
+}
+
+function finRenderChartCat(arr){
+  const canvas=document.getElementById('fin-chart-cat');
+  if(!canvas||typeof Chart==='undefined') return;
+  if(canvas._ci){canvas._ci.destroy();canvas._ci=null;}
+  const cL={renta:'Renta',insumos:'Insumos',servicios:'Servicios',equipamiento:'Equipo',personal:'Personal',publicidad:'Publicidad',otros:'Otros'};
+  const cC=['#F85149','#E3A13F','#3FB68B','#2EA8E0','#BC8CFF','#FF7B54','#8B949E'];
+  const dat={};
+  arr.filter(r=>r.tipo==='egreso').forEach(r=>{ const c=r.categoria||'otros'; dat[c]=(dat[c]||0)+(r.total||0); });
+  const labels=Object.keys(dat).map(k=>cL[k]||k), data=Object.values(dat);
+  if(!data.length){canvas.style.display='none';return;} canvas.style.display='';
+  canvas._ci=new Chart(canvas,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:cC.slice(0,data.length),borderWidth:0}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#8B949E',font:{size:10},boxWidth:12,padding:8}}}}});
+}
+
+function finRenderChartForma(arr){
+  const canvas=document.getElementById('fin-chart-forma');
+  if(!canvas||typeof Chart==='undefined') return;
+  if(canvas._ci){canvas._ci.destroy();canvas._ci=null;}
+  const fL={efectivo:'Efectivo',tarjeta:'Tarjeta',transferencia:'Transferencia',cheque:'Cheque'};
+  const fC=['#3FB68B','#2EA8E0','#BC8CFF','#E3A13F'];
+  const dat={};
+  arr.filter(r=>r.tipo!=='egreso').forEach(r=>{ const f=r.formaPago||'efectivo'; dat[f]=(dat[f]||0)+(r.total||0); });
+  const labels=Object.keys(dat).map(k=>fL[k]||k), data=Object.values(dat);
+  if(!data.length){canvas.style.display='none';return;} canvas.style.display='';
+  canvas._ci=new Chart(canvas,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:fC.slice(0,data.length),borderWidth:0}]},
+    options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#8B949E',font:{size:10},boxWidth:12,padding:8}}}}});
+}
+
+function finRenderMisConsultas(){
+  const el=document.getElementById('fin-mis-consultas-table');
+  const stEl=document.getElementById('fin-mis-consultas-stats');
+  if(!el) return;
+  const su=(typeof sessionUser!=='undefined')?sessionUser:null;
+  const esAdmin=su?.rol==='admin';
+  const usuId=su?.usuario||'';
+  const mesF=document.getElementById('fin-mc-mes')?.value||'todos';
+  const anioF=parseInt(document.getElementById('fin-mc-anio')?.value)||new Date().getFullYear();
+  let arr=finGet().filter(r=>r.tipo==='consulta');
+  if(!esAdmin) arr=arr.filter(r=>r.medicoId===usuId||r.medico===(su?.nombre||usuId));
+  arr=arr.filter(r=>new Date(r.fecha).getFullYear()===anioF);
+  if(mesF!=='todos') arr=arr.filter(r=>(new Date(r.fecha).getMonth()+1)===parseInt(mesF));
+  arr=arr.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const tBruto=arr.reduce((s,r)=>s+(r.monto||0),0);
+  const tDesc =arr.reduce((s,r)=>s+(r.descuento||0),0);
+  const tNeto =arr.reduce((s,r)=>s+(r.total||0),0);
+  if(stEl) stEl.innerHTML=`
+    <div style="background:rgba(63,182,139,.1);border:1px solid rgba(63,182,139,.3);border-radius:8px;padding:8px 14px;font-size:12px"><span style="color:var(--so)">Consultas:</span> <strong style="color:var(--ac2)">${arr.length}</strong></div>
+    <div style="background:rgba(46,168,224,.1);border:1px solid rgba(46,168,224,.3);border-radius:8px;padding:8px 14px;font-size:12px"><span style="color:var(--so)">Bruto:</span> <strong style="color:var(--ac)">$${tBruto.toFixed(2)}</strong></div>
+    <div style="background:rgba(227,161,63,.1);border:1px solid rgba(227,161,63,.3);border-radius:8px;padding:8px 14px;font-size:12px"><span style="color:var(--so)">Descuentos:</span> <strong style="color:var(--am)">-$${tDesc.toFixed(2)}</strong></div>
+    <div style="background:rgba(63,182,139,.1);border:1px solid rgba(63,182,139,.3);border-radius:8px;padding:8px 14px;font-size:12px"><span style="color:var(--so)">Neto cobrado:</span> <strong style="color:var(--ac2)">$${tNeto.toFixed(2)}</strong></div>`;
+  if(!arr.length){el.innerHTML='<div class="fin-empty">Sin consultas registradas para este período.</div>';return;}
+  el.innerHTML=`
+    <div class="fin-th fin-row-consulta"><span>Paciente / Tipo</span><span>Fecha</span><span style="text-align:right">Monto</span><span style="text-align:right">Descuento</span><span style="text-align:right">Total</span><span></span></div>
+    ${arr.map(r=>`<div class="fin-row fin-row-consulta">
+      <span><strong style="color:var(--tx)">${r.paciente}</strong><br><span style="font-size:10px;color:var(--so)">${r.tipoConsulta||'consulta'} · ${r.formaPago||''}</span></span>
+      <span style="color:var(--so)">${r.fecha}</span>
+      <span style="text-align:right;font-family:'DM Mono',monospace">$${(r.monto||0).toFixed(2)}</span>
+      <span style="text-align:right;color:var(--am);font-family:'DM Mono',monospace">${r.descuento>0?'-$'+r.descuento.toFixed(2):'—'}</span>
+      <span style="text-align:right;font-weight:700;color:var(--ac2);font-family:'DM Mono',monospace">$${(r.total||0).toFixed(2)}</span>
+      ${esAdmin?`<button class="fin-del-btn" onclick="finEliminar('${r.id}')" title="Eliminar">🗑️</button>`:'<span></span>'}
+    </div>`).join('')}`;
+}
+
+function finExportarCSV(){
+  const arr=finGet();
+  if(!arr.length){toast('Sin datos para exportar','err');return;}
+  const headers=['Fecha','Tipo','Concepto/Paciente','Tipo Consulta','Monto','Descuento','Total','Forma Pago','Médico','Categoría','Notas'];
+  const rows=arr.map(r=>[r.fecha,r.tipo,r.tipo==='consulta'?(r.paciente||''):(r.concepto||''),r.tipoConsulta||'',(r.monto||0).toFixed(2),(r.descuento||0).toFixed(2),(r.total||0).toFixed(2),r.formaPago||'',r.medico||'',r.categoria||'',(r.notas||'').replace(/,/g,' ')]);
+  const csv=[headers,...rows].map(r=>r.join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`finanzas_medbc_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
+  toast('📥 CSV exportado');
+}
+</script>
 </body>
-</html>
