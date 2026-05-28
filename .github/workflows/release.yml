@@ -36,5 +36,24 @@ jobs:
           releaseBody: "Nueva versión de MedBC Pro"
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: true
-          updaterJsonKeepUniversal: true
+
+      - name: Upload latest.json
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = node -p "require('./src-tauri/tauri.conf.json').version"
+          $url = "https://github.com/${{ github.repository }}/releases/download/v$version/bc-app_${version}_x64_en-US.msi"
+          $json = @{
+            version = "v$version"
+            notes = "Nueva versión de MedBC Pro"
+            pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                url = $url
+                signature = ""
+              }
+            }
+          } | ConvertTo-Json -Depth 5
+          $json | Out-File -FilePath latest.json -Encoding utf8
+          gh release upload "v$version" latest.json --clobber
