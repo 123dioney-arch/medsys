@@ -1199,6 +1199,7 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
   <div class="tbadge" id="clock">⏰ --:--</div>
   <div class="tbadge" id="sb-status" style="cursor:pointer;display:none" onclick="nav('config');stab('cfg','nube')" title="Estado Supabase — clic para configurar">☁️ Sin conexión</div>
   <div class="tbadge" id="badge-usuario" style="color:var(--ac2);border-color:rgba(63,182,139,.4)">👤 —</div>
+  <div class="tbadge" id="badge-cobros-pendientes" onclick="nav('finanzas');finInicializar();finTab('pendientes')" style="display:none;color:var(--am);border-color:rgba(255,200,0,.4);font-weight:700" title="Órdenes de cobro pendientes">💳 <span id="badge-cobros-num">0</span> pendiente(s)</div>
   <div class="tbadge" id="badge-usuarios" onclick="openUsrModal()" style="display:none">👥 Usuarios</div>
   <div class="tbadge" id="pwa-install-btn" onclick="installPWA()" style="display:none;color:#BC8CFF;border-color:rgba(188,140,255,.4)">📲 Instalar app</div>
   <div class="tbadge" onclick="terminarConsulta()" style="color:var(--ac2);border-color:rgba(63,182,139,.4);font-weight:700" title="Terminar consulta y limpiar todos los formularios">🏁 Terminar Consulta</div>
@@ -1294,6 +1295,9 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
       </button>
       <button onclick="nav('config')" style="background:rgba(139,148,158,.08);border:1px solid rgba(139,148,158,.25);border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;color:var(--so);font-size:12px;font-weight:700;transition:all .15s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
         <div style="font-size:22px;margin-bottom:4px">⚙️</div>Configuración
+      </button>
+      <button onclick="qpayAbrir()" style="background:rgba(63,182,139,.18);border:2px solid rgba(63,182,139,.6);border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;color:var(--ac2);font-size:12px;font-weight:800;transition:all .15s;position:relative" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+        <div style="font-size:22px;margin-bottom:4px">💳</div>Cobro Rápido
       </button>
     </div>
   </div>
@@ -2069,6 +2073,18 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
   <div class="card" style="margin-top:13px">
     <div class="ct" id="agenda-dia-titulo">📋 Citas del día</div>
     <div id="agenda-dia-lista" style="font-size:13px;color:var(--so)">Haz clic en un día para ver sus citas.</div>
+  </div>
+  <!-- Citas pendientes / vencidas -->
+  <div class="card" style="margin-top:13px;border-left:4px solid var(--am)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div class="ct" style="margin-bottom:0;color:var(--am)">⚠️ Citas pendientes y no atendidas</div>
+      <select class="inp" id="agenda-pend-filtro" onchange="renderCitasPendientes()" style="width:180px;font-size:12px">
+        <option value="vencidas">Solo vencidas (pasadas)</option>
+        <option value="pendientes">Solo programadas futuras</option>
+        <option value="todas">Todas las pendientes</option>
+      </select>
+    </div>
+    <div id="agenda-pend-lista" style="font-size:13px"></div>
   </div>
 </div>
 
@@ -4914,6 +4930,7 @@ function toggleDxClin(inpId, listId) {
     <div class="tab cfg-tab-admin" onclick="stab('cfg','instalar')">📲 Instalar app</div>
     <div class="tab cfg-tab-admin" onclick="stab('cfg','legal')">⚖️ Legal</div>
     <div class="tab cfg-tab-admin" onclick="stab('cfg','auditoria');renderAuditoria()">📋 Bitácora</div>
+    <div class="tab cfg-tab-admin" onclick="stab('cfg','conceptos');cfgRenderConceptos()">💲 Conceptos de Cobro</div>
   </div>
 
   <!-- Datos médico -->
@@ -5697,6 +5714,29 @@ function toggleDxClin(inpId, listId) {
     </div>
   </div><!-- /cfg-auditoria -->
 
+  <!-- Conceptos de Cobro -->
+  <div id="cfg-conceptos" class="tc">
+    <div class="card">
+      <div class="ct">💲 Conceptos de Cobro — Define tus servicios y precios base</div>
+      <div class="fr" style="margin-bottom:14px">
+        <div class="fg"><label class="lbl">Nombre del concepto</label>
+          <input class="inp" id="cfg-concepto-nombre" placeholder="Ej: Consulta general, Certificado médico...">
+        </div>
+        <div class="fg"><label class="lbl">Precio base ($)</label>
+          <input class="inp" id="cfg-concepto-precio" type="number" min="0" step="0.01" placeholder="0.00">
+        </div>
+        <div class="fg"><label class="lbl">Permite descuento</label>
+          <select class="inp" id="cfg-concepto-descuento">
+            <option value="1">✅ Sí</option>
+            <option value="0">❌ No</option>
+          </select>
+        </div>
+      </div>
+      <button class="pill pg2" onclick="cfgAgregarConcepto()">➕ Agregar concepto</button>
+      <div id="cfg-conceptos-lista" style="margin-top:16px"></div>
+    </div>
+  </div><!-- /cfg-conceptos -->
+
 <!-- ═══════════════════════ FINANZAS ═══════════════════════ -->
 <div id="page-finanzas" class="pg">
   <div class="ph">
@@ -5708,9 +5748,20 @@ function toggleDxClin(inpId, listId) {
   </div>
   <div class="tab-bar" id="fin-tab-bar">
     <div class="tab active" data-tab="registrar" onclick="finTab('registrar')">➕ Registrar</div>
+    <div class="tab" id="fin-tab-pendientes" data-tab="pendientes" onclick="finTab('pendientes')">💳 Pendientes <span id="fin-badge-pend" style="background:var(--am);color:#000;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:700;display:none">0</span></div>
     <div class="tab fin-tab-admin" data-tab="movimientos" onclick="finTab('movimientos')">📋 Movimientos</div>
     <div class="tab fin-tab-admin" data-tab="balance" onclick="finTab('balance')">📊 Balance</div>
     <div class="tab fin-tab-medico" data-tab="mis-consultas" onclick="finTab('mis-consultas')">🩺 Mis Consultas</div>
+  </div>
+
+  <!-- ── TAB PENDIENTES ── -->
+  <div id="fin-tc-pendientes" class="tc">
+    <div class="card" style="border-left:4px solid var(--am)">
+      <div class="ct" style="color:var(--am)">💳 Órdenes de Cobro Pendientes</div>
+      <div id="fin-pendientes-lista">
+        <div style="text-align:center;color:var(--so);padding:30px">No hay cobros pendientes</div>
+      </div>
+    </div>
   </div>
 
   <!-- ── TAB REGISTRAR ── -->
@@ -5718,6 +5769,11 @@ function toggleDxClin(inpId, listId) {
     <div class="card" id="fin-card-cobro-consulta" style="border-left:4px solid var(--ac2)">
       <div class="ct" style="color:var(--ac2)">🩺 Cobro de Consulta</div>
       <div class="fr">
+        <div class="fg" style="grid-column:span 2"><label class="lbl">Concepto de cobro</label>
+          <select class="inp" id="fin-concepto-cobro" onchange="finCargarConcepto()">
+            <option value="">— Seleccionar concepto —</option>
+          </select>
+        </div>
         <div class="fg"><label class="lbl">Paciente</label>
           <input class="inp" id="fin-pac-nombre" placeholder="Nombre del paciente" list="fin-pac-list">
           <datalist id="fin-pac-list"></datalist>
@@ -5764,10 +5820,13 @@ function toggleDxClin(inpId, listId) {
           <input class="inp" id="fin-notas-consulta" placeholder="Observaciones opcionales">
         </div>
       </div>
-      <button class="pill pg2" onclick="finRegistrarConsulta()">✅ Registrar cobro</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="pill pg2" onclick="finRegistrarConsulta()">✅ Registrar cobro</button>
+        <button class="pill" style="background:var(--am);color:#000;font-weight:700" onclick="finEnviarOrden()">📤 Enviar a cobro (recepción)</button>
+      </div>
     </div>
 
-    <div class="card" style="border-left:4px solid var(--ac)">
+    <div class="card fin-card-admin" id="fin-card-ingreso" style="border-left:4px solid var(--ac)">
       <div class="ct" style="color:var(--ac)">💵 Ingreso General</div>
       <div class="fr">
         <div class="fg"><label class="lbl">Concepto</label>
@@ -5794,7 +5853,7 @@ function toggleDxClin(inpId, listId) {
       <button class="pill pb" onclick="finRegistrarIngreso()">✅ Registrar ingreso</button>
     </div>
 
-    <div class="card" style="border-left:4px solid var(--rd)">
+    <div class="card fin-card-admin" id="fin-card-egreso" style="border-left:4px solid var(--rd)">
       <div class="ct" style="color:var(--rd)">📤 Gasto / Egreso</div>
       <div class="fr">
         <div class="fg"><label class="lbl">Concepto</label>
@@ -5905,6 +5964,60 @@ function toggleDxClin(inpId, listId) {
 <div id="arch-lightbox" onclick="if(event.target===this){this.classList.remove('open');const f=document.getElementById('_lb_pdf_frame');if(f){f.style.display='none';f.src='';}}">
   <button id="arch-lb-close" onclick="document.getElementById('arch-lightbox').classList.remove('open');const f=document.getElementById('_lb_pdf_frame');if(f){f.style.display='none';f.src=''}">✕</button>
   <img id="arch-lb-img" src="" alt="Imagen del estudio">
+</div>
+
+<!-- ══ MODAL COBRO RÁPIDO ══ -->
+<div id="modal-cobro-rapido" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:30000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--card);border-radius:16px;padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+    <div style="font-size:18px;font-weight:700;color:var(--tx);margin-bottom:4px">💳 ¿Registrar cobro?</div>
+    <div style="font-size:13px;color:var(--so);margin-bottom:16px" id="cobro-rapido-subtitulo">Servicio prestado</div>
+    <div style="display:grid;gap:10px">
+      <div>
+        <label style="font-size:11px;color:var(--so);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Concepto</label>
+        <select class="inp" id="cobro-rapido-concepto" onchange="cobRapidoCargarPrecio()" style="margin-top:4px">
+          <option value="">— Seleccionar concepto —</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--so);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Paciente</label>
+        <input class="inp" id="cobro-rapido-paciente" placeholder="Nombre del paciente" style="margin-top:4px">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label style="font-size:11px;color:var(--so);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Monto ($)</label>
+          <input class="inp" id="cobro-rapido-monto" type="number" min="0" step="0.01" placeholder="0.00" style="margin-top:4px" oninput="cobRapidoCalcTotal()">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--so);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Descuento ($)</label>
+          <input class="inp" id="cobro-rapido-descuento" type="number" min="0" step="0.01" placeholder="0.00" style="margin-top:4px" oninput="cobRapidoCalcTotal()">
+        </div>
+      </div>
+      <div style="background:rgba(63,182,139,.1);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--so)">Total a pagar</span>
+        <span id="cobro-rapido-total" style="font-size:22px;font-weight:700;color:var(--ac2)">$0.00</span>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--so);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Forma de pago</label>
+        <select class="inp" id="cobro-rapido-forma" style="margin-top:4px">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="tarjeta">💳 Tarjeta</option>
+          <option value="transferencia">📲 Transferencia</option>
+          <option value="cheque">🏦 Cheque</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--so);font-weight:700;text-transform:uppercase;letter-spacing:.5px">¿Quién cobra?</label>
+        <select class="inp" id="cobro-rapido-quien" style="margin-top:4px">
+          <option value="directo">✅ Yo cobro ahora</option>
+          <option value="recepcion">📤 Enviar a recepción</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:18px">
+      <button class="pill pg2" style="flex:1" onclick="cobRapidoConfirmar()">✅ Confirmar cobro</button>
+      <button class="pill pn" onclick="cobRapidoCerrar()">Omitir</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══ MODAL NOTA DE EVOLUCIÓN RÁPIDA ══ -->
@@ -6224,6 +6337,7 @@ function showPage(page){
   }
   if(page==='config'){updateSysStats();setTimeout(backupActualizarInfo,50);}
   if(page==='misdatos'){cargarMisDatos();}
+  if(page==='agenda'){setTimeout(()=>{renderAgenda();renderCitasPendientes();},50);}
   // ══ LIMPIAR FORMULARIOS AL NAVEGAR ══
   // Evita que queden datos del último paciente al abrir una sección nueva
   if(page==='receta'){
@@ -7776,6 +7890,7 @@ function dlCert(){
 function printCert(){
   const html=buildCertHTML();
   imprimirDocumento(html);
+  setTimeout(()=>finModalCobroRapido('Certificado médico'), 500);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -13125,27 +13240,7 @@ function agendaVerDia(fechaStr){
     `📋 Citas del ${f.getDate()} de ${meses[f.getMonth()]} ${f.getFullYear()} (${citasDia.length})`;
   const el=document.getElementById('agenda-dia-lista');
   if(!citasDia.length){el.innerHTML='<span style="color:var(--mu)">Sin citas este día. Haz clic en una celda del calendario para agregar.</span>';return;}
-  el.innerHTML=citasDia.map(c=>{
-    const cls='cita-'+(c.estado||'programada');
-    const estadoEmoji={'programada':'🔵','confirmada':'✅','cancelada':'❌','completada':'☑️','no-asistio':'⚠️'}[c.estado]||'🔵';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--bd)">
-      <div>
-        <span style="font-weight:700;color:var(--tx);font-size:14px">${c.hora||'--'}</span>
-        <span class="pill ${cls==='cita-programada'?'pb':cls==='cita-confirmada'?'pg2':cls==='cita-cancelada'?'pn':cls==='cita-no-asistio'?'pr2':'pn'}" style="margin-left:8px;font-size:10px">${estadoEmoji} ${c.estado||'programada'}</span>
-        <span style="margin-left:8px;font-size:11px;color:var(--so)">${c.tipo||'Consulta'} · ${c.dur||30} min</span><br>
-        <span style="font-size:13px;font-weight:600;color:var(--tx)">${c.paciente||'--'}</span>
-        ${c.motivo?`<span style="font-size:12px;color:var(--so)"> · ${c.motivo}</span>`:''}
-        ${c.tel?`<span style="font-size:11px;color:var(--mu)"> · 📞 ${c.tel}</span>`:''}
-        ${c.medico?(()=>{const col=getMedicoColor(c.medico);const nom=getUsuarios().find(u=>u.user===c.medico)?.nombre||c.medico;return `<br><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:${col};margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:${col};display:inline-block"></span>${nom}</span>`;})():''}
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="pill pb" style="font-size:10px" onclick="editarCita('${c.id}')">✏️</button>
-        <button class="pill pn" style="font-size:10px" onclick="citaEstado('${c.id}','completada')">☑️</button>
-        <button class="pill" style="font-size:10px;background:rgba(37,211,102,.15);color:#25D366;border-color:rgba(37,211,102,.4)" onclick="citaWhatsApp('${c.id}')">📲</button>
-        <button class="pill pr2" style="font-size:10px" onclick="eliminarCita('${c.id}')">🗑️</button>
-      </div>
-    </div>`;
-  }).join('');
+  el.innerHTML=citasDia.map(c=>renderCitaRow(c)).join('');
 }
 
 function abrirModalCita(fecha='',hora=''){
@@ -13220,7 +13315,84 @@ function citaEstado(id,estado){
   const c=citas.find(x=>x.id===id);if(!c) return;
   c.estado=estado;saveCitas();renderAgenda();
   if(citaSelDia) agendaVerDia(citaSelDia);
+  renderCitasPendientes();
   toast('✅ Estado actualizado');
+}
+
+function citaAgregarNota(id){
+  const c=citas.find(x=>x.id===id);if(!c) return;
+  const nota=prompt('Nota para la cita de '+c.paciente+':', c.notaCita||'');
+  if(nota===null) return;
+  c.notaCita=nota.trim();
+  saveCitas();
+  if(citaSelDia) agendaVerDia(citaSelDia);
+  renderCitasPendientes();
+  toast('📝 Nota guardada');
+}
+
+function renderCitaRow(c){
+  const estadoEmoji={'programada':'🔵','confirmada':'✅','cancelada':'❌','completada':'☑️','no-asistio':'⚠️'}[c.estado]||'🔵';
+  const estadoCls={'programada':'pb','confirmada':'pg2','cancelada':'pr2','completada':'pn','no-asistio':'pr2'}[c.estado]||'pb';
+  const esCancelada=c.estado==='cancelada'||c.estado==='completada';
+  return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--bd);gap:10px">
+    <div style="flex:1;min-width:0">
+      <span style="font-weight:700;color:var(--tx);font-size:14px">${c.hora||'--'}</span>
+      <span class="pill ${estadoCls}" style="margin-left:8px;font-size:10px">${estadoEmoji} ${c.estado||'programada'}</span>
+      <span style="margin-left:8px;font-size:11px;color:var(--so)">${c.tipo||'Consulta'} · ${c.dur||30} min</span><br>
+      <span style="font-size:13px;font-weight:600;color:var(--tx)">${c.paciente||'--'}</span>
+      ${c.motivo?`<span style="font-size:12px;color:var(--so)"> · ${c.motivo}</span>`:''}
+      ${c.tel?`<span style="font-size:11px;color:var(--mu)"> · 📞 ${c.tel}</span>`:''}
+      ${c.medico?(()=>{const col=getMedicoColor(c.medico);const nom=getUsuarios().find(u=>u.user===c.medico)?.nombre||c.medico;return `<br><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:${col};margin-top:2px"><span style="width:8px;height:8px;border-radius:50%;background:${col};display:inline-block"></span>${nom}</span>`;})():''}
+      ${c.notaCita?`<div style="margin-top:5px;font-size:11px;background:rgba(227,161,63,.1);border-left:3px solid var(--am);border-radius:4px;padding:4px 8px;color:var(--am)">📝 ${c.notaCita}</div>`:''}
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0">
+      <button class="pill pb" style="font-size:10px" onclick="editarCita('${c.id}')">✏️</button>
+      ${!esCancelada?`<button class="pill pn" style="font-size:10px" onclick="citaEstado('${c.id}','completada')" title="Marcar completada">☑️</button>`:''}
+      ${c.estado!=='cancelada'?`<button class="pill pr2" style="font-size:10px" onclick="citaEstado('${c.id}','cancelada')" title="Cancelar cita">❌ Cancelar</button>`:''}
+      <button class="pill" style="font-size:10px;background:rgba(227,161,63,.12);color:var(--am);border-color:rgba(227,161,63,.4)" onclick="citaAgregarNota('${c.id}')" title="Agregar nota">📝 Nota</button>
+      <button class="pill" style="font-size:10px;background:rgba(37,211,102,.15);color:#25D366;border-color:rgba(37,211,102,.4)" onclick="citaWhatsApp('${c.id}')">📲</button>
+      <button class="pill pr2" style="font-size:10px;opacity:.6" onclick="eliminarCita('${c.id}')">🗑️</button>
+    </div>
+  </div>`;
+}
+
+function renderCitasPendientes(){
+  const el=document.getElementById('agenda-pend-lista'); if(!el) return;
+  const filtro=document.getElementById('agenda-pend-filtro')?.value||'vencidas';
+  const hoy=new Date().toISOString().slice(0,10);
+  let arr=citas.filter(c=>c.estado==='programada'||c.estado==='confirmada');
+  if(filtro==='vencidas') arr=arr.filter(c=>c.fecha<hoy);
+  else if(filtro==='pendientes') arr=arr.filter(c=>c.fecha>=hoy);
+  // 'todas' = sin filtro adicional
+  arr=arr.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)||( a.hora||'').localeCompare(b.hora||''));
+  if(!arr.length){
+    el.innerHTML=`<div style="color:var(--mu);font-size:13px;padding:12px 0">Sin citas ${filtro==='vencidas'?'vencidas':filtro==='pendientes'?'futuras pendientes':'pendientes'} 🎉</div>`;
+    return;
+  }
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Dic'];
+  el.innerHTML=arr.map(c=>{
+    const f=new Date(c.fecha+'T12:00:00');
+    const fechaLabel=`${f.getDate()} ${['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][f.getMonth()]} ${f.getFullYear()}`;
+    const esVencida=c.fecha<hoy;
+    return `<div style="border-left:3px solid ${esVencida?'var(--rd)':'var(--ac)'};padding:10px 12px;margin-bottom:8px;background:${esVencida?'rgba(248,81,73,.05)':'rgba(46,168,224,.05)'};border-radius:0 8px 8px 0">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+        <div>
+          <span style="font-size:12px;font-weight:700;color:${esVencida?'var(--rd)':'var(--ac)'}">📅 ${fechaLabel} · ${c.hora||'--'}</span>
+          ${esVencida?'<span style="font-size:10px;background:rgba(248,81,73,.2);color:var(--rd);border-radius:4px;padding:1px 6px;margin-left:6px;font-weight:700">VENCIDA</span>':''}
+          <br><span style="font-size:13px;font-weight:700;color:var(--tx)">${c.paciente||'--'}</span>
+          ${c.motivo?`<span style="font-size:12px;color:var(--so)"> · ${c.motivo}</span>`:''}
+          ${c.tel?`<br><span style="font-size:11px;color:var(--mu)">📞 ${c.tel}</span>`:''}
+          ${c.notaCita?`<div style="margin-top:4px;font-size:11px;background:rgba(227,161,63,.1);border-left:3px solid var(--am);border-radius:4px;padding:3px 7px;color:var(--am)">📝 ${c.notaCita}</div>`:''}
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0">
+          ${esVencida?`<button class="pill pr2" style="font-size:10px" onclick="citaEstado('${c.id}','no-asistio')" title="No asistió">⚠️ No asistió</button>`:''}
+          <button class="pill pn" style="font-size:10px" onclick="citaEstado('${c.id}','completada')" title="Completada">☑️ Atendida</button>
+          <button class="pill pr2" style="font-size:10px" onclick="citaEstado('${c.id}','cancelada')" title="Cancelar">❌ Cancelar</button>
+          <button class="pill" style="font-size:10px;background:rgba(227,161,63,.12);color:var(--am);border-color:rgba(227,161,63,.4)" onclick="citaAgregarNota('${c.id}')">📝 Nota</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function eliminarCita(id){
@@ -17268,7 +17440,9 @@ function terminarConsulta() {
   if (typeof expActualId !== 'undefined') expActualId = null;
   if (typeof toast === 'function') toast('✅ Consulta terminada — formularios limpios');
   if (typeof log === 'function') log('🏁 Consulta terminada y formularios limpiados');
-  if (typeof nav === 'function') nav('dashboard');
+
+  // Ofrecer cobro
+  finModalCobroRapido('Consulta');
 }
 
 // ══════════════════════════════════════════════════════════
@@ -18561,6 +18735,9 @@ function finInicializar(){
   document.querySelectorAll('.fin-tab-admin').forEach(t => { t.style.display = (rol==='admin') ? '' : 'none'; });
   document.querySelectorAll('.fin-tab-medico').forEach(t => { t.style.display = (rol==='medico'||rol==='admin') ? '' : 'none'; });
 
+  // Ocultar cards de ingreso/egreso general para médicos (solo ven sus consultas)
+  document.querySelectorAll('.fin-card-admin').forEach(c => { c.style.display = (rol==='admin'||rol==='recepcion') ? '' : 'none'; });
+
   // Stats ocultas para recepción
   const sw = document.getElementById('fin-stats-wrap');
   if(sw) sw.style.display = (rol==='recepcion') ? 'none' : '';
@@ -18576,21 +18753,31 @@ function finInicializar(){
   });
 
   // Auto-llenar médico
-  const medEl = document.getElementById('fin-medico-cobro');
+  // Si el elemento actual es un select (quedó de una sesión de recepción), restaurar a input
+  let medEl = document.getElementById('fin-medico-cobro');
+  if(medEl && medEl.tagName === 'SELECT' && rol !== 'recepcion'){
+    const inp = document.createElement('input');
+    inp.className = 'inp'; inp.id = 'fin-medico-cobro';
+    inp.placeholder = 'Médico'; inp.readOnly = true;
+    inp.style.background = 'var(--card)';
+    medEl.replaceWith(inp);
+    medEl = inp;
+  }
   if(medEl && su) {
     if(rol === 'recepcion') {
-      // Recepcion: reemplazar input por select con lista de médicos
-      const medicos = getUsuarios().filter(u => u.rol === 'medico' || u.rol === 'admin');
-      const sel = document.createElement('select');
-      sel.className = 'inp';
-      sel.id = 'fin-medico-cobro';
-      sel.style.background = 'var(--card)';
-      sel.innerHTML = '<option value="">— Seleccionar médico —</option>' +
-        medicos.map(m => `<option value="${m.nombre||m.user}">${m.nombre||m.user}</option>`).join('');
-      medEl.replaceWith(sel);
+      if(medEl.tagName !== 'SELECT'){
+        // Recepcion: reemplazar input por select con lista de médicos
+        const medicos = getUsuarios().filter(u => u.rol === 'medico' || u.rol === 'admin');
+        const sel = document.createElement('select');
+        sel.className = 'inp'; sel.id = 'fin-medico-cobro';
+        sel.style.background = 'var(--card)';
+        sel.innerHTML = '<option value="">— Seleccionar médico —</option>' +
+          medicos.map(m => `<option value="${m.nombre||m.user}">${m.nombre||m.user}</option>`).join('');
+        medEl.replaceWith(sel);
+      }
     } else {
       // Medico/Admin: auto-llenar con su nombre, solo lectura
-      medEl.value = su.nombre || su.usuario || '';
+      medEl.value = su.nombre || su.user || '';
       medEl.readOnly = true;
       medEl.style.background = 'var(--card)';
     }
@@ -18600,8 +18787,11 @@ function finInicializar(){
   if(rol !== 'recepcion') finRenderStats();
   finPoblarFiltrosMeses();
   finTab('registrar');
+  finActualizarSelectConceptos();
+  finActualizarBadgePendientes();
+  if(rol === 'recepcion') { finTab('pendientes'); finRenderPendientes(); }
   if(rol === 'admin') setTimeout(finRenderBalance, 100);
-  if(rol === 'medico') setTimeout(finRenderMisConsultas, 100);
+  if(rol === 'medico' || rol === 'admin') setTimeout(finRenderMisConsultas, 150);
 }
 
 function finLlenarPacientes(){
@@ -18638,9 +18828,11 @@ function finTab(tab){
   if(tab==='movimientos') finRenderMovimientos();
   if(tab==='balance' && rol==='admin') finRenderBalance();
   if(tab==='mis-consultas') finRenderMisConsultas();
+  if(tab==='pendientes') finRenderPendientes();
 }
 
 function finRegistrarConsulta(){
+  try{
   const monto    = parseFloat(document.getElementById('fin-monto-consulta')?.value) || 0;
   const descuento= parseFloat(document.getElementById('fin-descuento')?.value) || 0;
   const total    = Math.max(0, monto - descuento);
@@ -18656,12 +18848,13 @@ function finRegistrarConsulta(){
   const su = (typeof sessionUser !== 'undefined') ? sessionUser : null;
   const reg = { id:finUID(), tipo:'consulta', paciente:pac, tipoConsulta:tipo, monto, descuento,
     pctDescuento: monto>0?+((descuento/monto)*100).toFixed(1):0, motivoDesc, total, formaPago:forma,
-    medico: medico||(su?.nombre||su?.usuario||''), medicoId: su?.usuario||'',
-    fecha, notas, creadoPor:su?.usuario||'', creadoEn:new Date().toLocaleString('es-MX') };
+    medico: medico||(su?.nombre||su?.user||''), medicoId: su?.user||su?.usuario||'',
+    fecha, notas, creadoPor:su?.user||su?.usuario||'', creadoEn:new Date().toLocaleString('es-MX') };
   const arr = finGet(); arr.push(reg); finSave(arr);
   finLimpiarConsulta(); finRenderStats();
   toast('✅ Cobro registrado — $' + total.toFixed(2));
   if(typeof logActividad==='function') logActividad(`💰 Cobro: ${pac} · $${total.toFixed(2)}`);
+  }catch(e){ console.error('finRegistrarConsulta error:',e); toast('❌ Error al registrar: '+e.message,'err'); }
 }
 
 function finLimpiarConsulta(){
@@ -18717,12 +18910,19 @@ function finEliminar(id){
 
 function finRenderStats(){
   const el = document.getElementById('fin-stats-grid'); if(!el) return;
-  const arr = finGet();
+  try{
+  const su = (typeof sessionUser !== 'undefined') ? sessionUser : null;
+  const esMedico = su?.rol === 'medico';
+  const usuId = su?.user||su?.usuario || '';
+  const usuNombre = su?.nombre||usuId;
+  let arr = finGet();
+  // Médicos solo ven sus propias consultas en el resumen
+  if(esMedico) arr = arr.filter(r => r.tipo !== 'consulta' || r.medicoId === usuId || r.medico === usuNombre);
   const hoy = new Date();
   const mes = hoy.getMonth()+1, anio = hoy.getFullYear();
   const esMes = r => { const d=new Date(r.fecha); return d.getMonth()+1===mes && d.getFullYear()===anio; };
   const ingMes  = arr.filter(r=>(r.tipo==='consulta'||r.tipo==='ingreso')&&esMes(r)).reduce((s,r)=>s+(r.total||0),0);
-  const egrMes  = arr.filter(r=>r.tipo==='egreso'&&esMes(r)).reduce((s,r)=>s+(r.total||0),0);
+  const egrMes  = esMedico ? 0 : arr.filter(r=>r.tipo==='egreso'&&esMes(r)).reduce((s,r)=>s+(r.total||0),0);
   const balMes  = ingMes - egrMes;
   const consHoy = arr.filter(r=>r.tipo==='consulta'&&r.fecha===hoy.toISOString().slice(0,10)).length;
   const fmt = n => '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -18731,6 +18931,7 @@ function finRenderStats(){
     <div class="fin-sc" style="--fc:var(--rd)"><div class="fin-sn">${fmt(egrMes)}</div><div class="fin-sl">📤 Egresos del mes</div></div>
     <div class="fin-sc" style="--fc:${balMes>=0?'var(--ac2)':'var(--rd)'}"><div class="fin-sn" style="color:${balMes>=0?'var(--ac2)':'var(--rd)'}">${fmt(balMes)}</div><div class="fin-sl">📊 Balance del mes</div></div>
     <div class="fin-sc" style="--fc:var(--ac)"><div class="fin-sn">${consHoy}</div><div class="fin-sl">🩺 Consultas hoy</div></div>`;
+  }catch(e){ console.error('finRenderStats error:',e); }
 }
 
 function finPoblarFiltrosMeses(){
@@ -18744,9 +18945,15 @@ function finPoblarFiltrosMeses(){
 
 function finRenderMovimientos(){
   const el = document.getElementById('fin-movimientos-table'); if(!el) return;
+  try{
   const su = (typeof sessionUser!=='undefined') ? sessionUser : null;
   const esAdmin = su?.rol==='admin';
+  const esMedico = su?.rol==='medico';
+  const usuId = su?.user||su?.usuario||'';
+  const usuNombre = su?.nombre||usuId;
   let arr = finGet();
+  // Médicos solo ven sus propias consultas, no egresos ni ingresos del consultorio
+  if(esMedico) arr = arr.filter(r => r.tipo === 'consulta' && (r.medicoId === usuId || r.medico === usuNombre));
   const ft = document.getElementById('fin-fil-tipo')?.value||'todos';
   const fm = document.getElementById('fin-fil-mes')?.value||'todos';
   if(ft!=='todos') arr=arr.filter(r=>r.tipo===ft);
@@ -18779,6 +18986,7 @@ function finRenderMovimientos(){
         ${esAdmin?`<button class="fin-del-btn" onclick="finEliminar('${r.id}')" title="Eliminar">🗑️</button>`:'<span></span>'}
       </div>`;
     }).join('')}`;
+  }catch(e){ console.error('finRenderMovimientos error:',e); el.innerHTML='<div class="fin-empty">Error al cargar movimientos.</div>'; }
 }
 
 function finRenderBalance(){
@@ -18854,11 +19062,13 @@ function finRenderMisConsultas(){
   if(!el) return;
   const su=(typeof sessionUser!=='undefined')?sessionUser:null;
   const esAdmin=su?.rol==='admin';
-  const usuId=su?.usuario||'';
+  const usuId=su?.user||su?.usuario||'';
+  const usuNombre=su?.nombre||usuId;
   const mesF=document.getElementById('fin-mc-mes')?.value||'todos';
   const anioF=parseInt(document.getElementById('fin-mc-anio')?.value)||new Date().getFullYear();
   let arr=finGet().filter(r=>r.tipo==='consulta');
-  if(!esAdmin) arr=arr.filter(r=>r.medicoId===usuId||r.medico===(su?.nombre||usuId));
+  // Admin y médico: ambos ven solo sus propias consultas en "Mis Consultas"
+  arr=arr.filter(r=>r.medicoId===usuId||r.medico===usuNombre);
   arr=arr.filter(r=>new Date(r.fecha).getFullYear()===anioF);
   if(mesF!=='todos') arr=arr.filter(r=>(new Date(r.fecha).getMonth()+1)===parseInt(mesF));
   arr=arr.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha));
@@ -18894,6 +19104,612 @@ function finExportarCSV(){
   const a=document.createElement('a'); a.href=url; a.download=`finanzas_medbc_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
   toast('📥 CSV exportado');
 }
+
+// ══════════════════════════════════════════════
+// CONCEPTOS PREDETERMINADOS (si no hay ninguno)
+// ══════════════════════════════════════════════
+const CONCEPTOS_DEFAULT = [
+  { id:'def1', nombre:'Consulta general',      precio:300, descuento:true  },
+  { id:'def2', nombre:'Consulta pediátrica',   precio:300, descuento:true  },
+  { id:'def3', nombre:'Consulta de urgencia',  precio:400, descuento:false },
+  { id:'def4', nombre:'Certificado médico',    precio:200, descuento:false },
+  { id:'def5', nombre:'Procedimiento menor',   precio:500, descuento:true  },
+  { id:'def6', nombre:'Consulta subsecuente',  precio:250, descuento:true  },
+];
+function cfgConceptosGetConDefault(){
+  const arr = cfgConceptosGet();
+  return arr.length ? arr : CONCEPTOS_DEFAULT;
+}
+
+// ══════════════════════════════════════════════
+// MODAL COBRO RÁPIDO
+// ══════════════════════════════════════════════
+function finModalCobroRapido(conceptoSugerido=''){
+  const modal = document.getElementById('modal-cobro-rapido');
+  if(!modal) return;
+  // Llenar select de conceptos
+  const conceptos = cfgConceptosGetConDefault();
+  const sel = document.getElementById('cobro-rapido-concepto');
+  if(sel){
+    sel.innerHTML = '<option value="">— Seleccionar concepto —</option>' +
+      conceptos.map(c=>`<option value="${c.id}" data-precio="${c.precio}" data-descuento="${c.descuento}">${c.nombre} — $${(c.precio||0).toFixed(2)}</option>`).join('');
+    // Preseleccionar concepto sugerido
+    if(conceptoSugerido){
+      const idx = conceptos.findIndex(c=>c.nombre.toLowerCase().includes(conceptoSugerido.toLowerCase()));
+      if(idx>=0) sel.selectedIndex = idx+1;
+      cobRapidoCargarPrecio();
+    }
+  }
+  // Prellenar paciente si hay uno activo
+  const pacEl = document.getElementById('cobro-rapido-paciente');
+  if(pacEl){
+    const nombres = ['exp-nombre','rx-pac','cert-pac','fin-pac-nombre'];
+    for(const id of nombres){
+      const v = document.getElementById(id)?.value?.trim();
+      if(v){ pacEl.value=v; break; }
+    }
+  }
+  const sub = document.getElementById('cobro-rapido-subtitulo');
+  if(sub) sub.textContent = conceptoSugerido ? `Servicio: ${conceptoSugerido}` : 'Selecciona el concepto y confirma';
+  cobRapidoCalcTotal();
+  modal.style.display='flex';
+}
+
+function cobRapidoCargarPrecio(){
+  const sel = document.getElementById('cobro-rapido-concepto');
+  if(!sel||!sel.value) return;
+  const opt = sel.options[sel.selectedIndex];
+  const precio = parseFloat(opt.dataset.precio)||0;
+  const permiteDesc = opt.dataset.descuento==='true';
+  const montoEl = document.getElementById('cobro-rapido-monto');
+  const descEl  = document.getElementById('cobro-rapido-descuento');
+  if(montoEl) montoEl.value = precio.toFixed(2);
+  if(descEl){ descEl.value='0'; descEl.disabled=!permiteDesc; }
+  cobRapidoCalcTotal();
+}
+
+function cobRapidoCalcTotal(){
+  const monto = parseFloat(document.getElementById('cobro-rapido-monto')?.value)||0;
+  const desc  = parseFloat(document.getElementById('cobro-rapido-descuento')?.value)||0;
+  const total = Math.max(0, monto-desc);
+  const el = document.getElementById('cobro-rapido-total');
+  if(el) el.textContent = '$'+total.toFixed(2);
+}
+
+function cobRapidoConfirmar(){
+  const sel     = document.getElementById('cobro-rapido-concepto');
+  const pac     = document.getElementById('cobro-rapido-paciente')?.value.trim()||'';
+  const monto   = parseFloat(document.getElementById('cobro-rapido-monto')?.value)||0;
+  const desc    = parseFloat(document.getElementById('cobro-rapido-descuento')?.value)||0;
+  const total   = Math.max(0,monto-desc);
+  const forma   = document.getElementById('cobro-rapido-forma')?.value||'efectivo';
+  const quien   = document.getElementById('cobro-rapido-quien')?.value||'directo';
+  const conceptoNombre = sel?.options[sel.selectedIndex]?.text?.split(' — ')[0]||'consulta';
+  const su = (typeof sessionUser!=='undefined')?sessionUser:null;
+  const medico = su?.nombre||su?.user||'';
+  const medicoId = su?.user||su?.usuario||'';
+  if(!monto){ toast('⚠️ Ingresa el monto','err'); return; }
+  if(quien==='recepcion'){
+    // Enviar orden a recepción
+    const orden = {
+      id:finUID(), estado:'pendiente',
+      paciente:pac||'Sin nombre', tipoConsulta:'consulta', concepto:conceptoNombre,
+      monto, descuento:desc, motivoDesc:'', total, notas:'', medico, medicoId,
+      fechaEnvio:new Date().toLocaleString('es-MX'),
+      hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})
+    };
+    const arr=finOrdenesGet(); arr.push(orden); finOrdenesSave(arr);
+    finActualizarBadgePendientes();
+    toast(`📤 Orden enviada a recepción — $${total.toFixed(2)}`);
+  } else {
+    // Registrar directo en finanzas
+    const reg = {
+      id:finUID(), tipo:'consulta',
+      paciente:pac||'Sin nombre', tipoConsulta:'consulta',
+      concepto:conceptoNombre, monto, descuento:desc,
+      pctDescuento:monto>0?+((desc/monto)*100).toFixed(1):0,
+      motivoDesc:'', total, formaPago:forma, medico, medicoId,
+      fecha:new Date().toISOString().slice(0,10),
+      hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
+      notas:'', creadoPor:medicoId, creadoEn:new Date().toLocaleString('es-MX')
+    };
+    const arr=finGet(); arr.push(reg); finSave(arr);
+    toast(`✅ Cobro registrado — $${total.toFixed(2)} · ${forma}`);
+    if(typeof logActividad==='function') logActividad(`💰 Cobro: ${pac} · $${total.toFixed(2)}`);
+  }
+  cobRapidoCerrar();
+  if(typeof nav==='function') nav('dashboard');
+}
+
+function cobRapidoCerrar(){
+  const modal=document.getElementById('modal-cobro-rapido');
+  if(modal) modal.style.display='none';
+  if(typeof nav==='function') nav('dashboard');
+}
+
+const CFG_CONCEPTOS_KEY = 'medbc_conceptos_cobro';
+function cfgConceptosGet(){ return LS.get(CFG_CONCEPTOS_KEY, []); }
+function cfgConceptosSave(arr){ LS.set(CFG_CONCEPTOS_KEY, arr); }
+
+function cfgAgregarConcepto(){
+  const nombre = document.getElementById('cfg-concepto-nombre')?.value.trim();
+  const precio = parseFloat(document.getElementById('cfg-concepto-precio')?.value)||0;
+  const descuento = document.getElementById('cfg-concepto-descuento')?.value === '1';
+  if(!nombre){ toast('⚠️ Escribe el nombre del concepto','err'); return; }
+  const arr = cfgConceptosGet();
+  arr.push({ id: Date.now().toString(36), nombre, precio, descuento });
+  cfgConceptosSave(arr);
+  document.getElementById('cfg-concepto-nombre').value='';
+  document.getElementById('cfg-concepto-precio').value='';
+  cfgRenderConceptos();
+  finActualizarSelectConceptos();
+  toast('✅ Concepto agregado');
+}
+
+function cfgEliminarConcepto(id){
+  const arr = cfgConceptosGet().filter(c=>c.id!==id);
+  cfgConceptosSave(arr);
+  cfgRenderConceptos();
+  finActualizarSelectConceptos();
+  toast('🗑️ Concepto eliminado');
+}
+
+function cfgRenderConceptos(){
+  const lista = document.getElementById('cfg-conceptos-lista');
+  if(!lista) return;
+  const arr = cfgConceptosGet();
+  if(!arr.length){ lista.innerHTML='<div style="color:var(--so);font-size:13px;padding:10px">Sin conceptos definidos. Agrega el primero arriba.</div>'; return; }
+  lista.innerHTML = arr.map(c=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">
+      <div style="flex:1">
+        <strong style="color:var(--tx)">${c.nombre}</strong>
+        <span style="color:var(--so);font-size:12px;margin-left:8px">$${(c.precio||0).toFixed(2)}</span>
+        <span style="font-size:10px;margin-left:6px;padding:2px 7px;border-radius:10px;background:${c.descuento?'rgba(63,182,139,.15)':'rgba(248,81,73,.15)'};color:${c.descuento?'var(--ac2)':'var(--rd)'}">
+          ${c.descuento?'✅ Descuento permitido':'❌ Sin descuento'}
+        </span>
+      </div>
+      <button class="pill pr2" style="padding:4px 12px;font-size:11px" onclick="cfgEliminarConcepto('${c.id}')">🗑️ Eliminar</button>
+    </div>
+  `).join('');
+}
+
+function finActualizarSelectConceptos(){
+  const sel = document.getElementById('fin-concepto-cobro');
+  if(!sel) return;
+  const arr = cfgConceptosGetConDefault();
+  sel.innerHTML = '<option value="">— Seleccionar concepto —</option>' +
+    arr.map(c=>`<option value="${c.id}" data-precio="${c.precio}" data-descuento="${c.descuento}">${c.nombre} — $${(c.precio||0).toFixed(2)}</option>`).join('');
+}
+
+function finCargarConcepto(){
+  const sel = document.getElementById('fin-concepto-cobro');
+  if(!sel || !sel.value) return;
+  const opt = sel.options[sel.selectedIndex];
+  const precio = parseFloat(opt.dataset.precio)||0;
+  const permiteDesc = opt.dataset.descuento === 'true';
+  const montoEl = document.getElementById('fin-monto-consulta');
+  const descEl = document.getElementById('fin-descuento');
+  if(montoEl) { montoEl.value = precio.toFixed(2); }
+  if(descEl && !permiteDesc) { descEl.value='0'; descEl.disabled=true; }
+  else if(descEl) { descEl.disabled=false; }
+  finCalcularTotal();
+}
+
+// ══════════════════════════════════════════════
+// ÓRDENES DE COBRO MÉDICO → RECEPCIÓN
+// ══════════════════════════════════════════════
+const FIN_ORDENES_KEY = 'medbc_ordenes_cobro';
+function finOrdenesGet(){ return LS.get(FIN_ORDENES_KEY, []); }
+function finOrdenesSave(arr){ LS.set(FIN_ORDENES_KEY, arr); }
+
+function finEnviarOrden(){
+  const pac   = document.getElementById('fin-pac-nombre')?.value.trim();
+  const tipo  = document.getElementById('fin-tipo-consulta')?.value;
+  const monto = parseFloat(document.getElementById('fin-monto-consulta')?.value)||0;
+  const desc  = parseFloat(document.getElementById('fin-descuento')?.value)||0;
+  const total = Math.max(0, monto - desc);
+  const motivo= document.getElementById('fin-motivo-desc')?.value.trim()||'';
+  const notas = document.getElementById('fin-notas-consulta')?.value.trim()||'';
+  const medico= document.getElementById('fin-medico-cobro')?.value.trim()||'';
+  const concepto = document.getElementById('fin-concepto-cobro')?.options[document.getElementById('fin-concepto-cobro').selectedIndex]?.text || '';
+  if(!pac){ toast('⚠️ Escribe el nombre del paciente','err'); return; }
+  if(monto<=0){ toast('⚠️ Ingresa el monto','err'); return; }
+  const su = (typeof sessionUser!=='undefined')?sessionUser:null;
+  const medicoId = su?.user||su?.usuario||'';
+  const orden = {
+    id: finUID(), estado:'pendiente',
+    paciente:pac, tipoConsulta:tipo, concepto,
+    monto, descuento:desc, motivoDesc:motivo,
+    total, notas, medico, medicoId,
+    fechaEnvio: new Date().toLocaleString('es-MX'),
+    hora: new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})
+  };
+  const arr = finOrdenesGet();
+  arr.push(orden);
+  finOrdenesSave(arr);
+  finActualizarBadgePendientes();
+  finLimpiarConsulta();
+  toast(`📤 Orden enviada a recepción — ${pac} · $${total.toFixed(2)}`);
+  if(typeof logActividad==='function') logActividad(`📤 Orden cobro enviada: ${pac} · $${total.toFixed(2)}`);
+}
+
+function finEjecutarOrden(id){
+  const forma = prompt('Forma de pago:\n1) Efectivo\n2) Tarjeta\n3) Transferencia\n4) Cheque\n\nEscribe el número:');
+  const formaMap = {'1':'efectivo','2':'tarjeta','3':'transferencia','4':'cheque'};
+  const formaPago = formaMap[forma?.trim()] || 'efectivo';
+  const ordenes = finOrdenesGet();
+  const idx = ordenes.findIndex(o=>o.id===id);
+  if(idx===-1){ toast('Orden no encontrada','err'); return; }
+  const o = ordenes[idx];
+  // Registrar en finanzas
+  const reg = {
+    id:finUID(), tipo:'consulta',
+    paciente:o.paciente, tipoConsulta:o.tipoConsulta,
+    concepto:o.concepto, monto:o.monto, descuento:o.descuento,
+    pctDescuento:o.monto>0?+((o.descuento/o.monto)*100).toFixed(1):0,
+    motivoDesc:o.motivoDesc, total:o.total,
+    formaPago, medico:o.medico, medicoId:o.medicoId||'',
+    fecha:new Date().toISOString().slice(0,10),
+    hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
+    notas:o.notas, cobradoPor: (typeof sessionUser!=='undefined'?sessionUser?.nombre:'recepcion')
+  };
+  const fin = finGet(); fin.push(reg); finSave(fin);
+  // Marcar orden como cobrada
+  ordenes.splice(idx,1);
+  finOrdenesSave(ordenes);
+  finActualizarBadgePendientes();
+  finRenderPendientes();
+  toast(`✅ Cobro ejecutado — ${o.paciente} · $${o.total.toFixed(2)} · ${formaPago}`);
+  if(typeof logActividad==='function') logActividad(`✅ Cobro ejecutado: ${o.paciente} · $${o.total.toFixed(2)}`);
+}
+
+function finCancelarOrden(id){
+  if(!confirm('¿Cancelar esta orden de cobro?')) return;
+  const arr = finOrdenesGet().filter(o=>o.id!==id);
+  finOrdenesSave(arr);
+  finActualizarBadgePendientes();
+  finRenderPendientes();
+  toast('🗑️ Orden cancelada');
+}
+
+function finRenderPendientes(){
+  const lista = document.getElementById('fin-pendientes-lista');
+  if(!lista) return;
+  const arr = finOrdenesGet();
+  if(!arr.length){
+    lista.innerHTML='<div style="text-align:center;color:var(--so);padding:30px">No hay cobros pendientes</div>';
+    return;
+  }
+  lista.innerHTML = arr.map(o=>`
+    <div style="padding:14px;border-radius:10px;border:1px solid var(--bd);margin-bottom:10px;background:var(--card)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:15px;color:var(--tx)">👤 ${o.paciente}</div>
+          <div style="font-size:12px;color:var(--so);margin-top:2px">${o.concepto||o.tipoConsulta||'consulta'} · Enviado: ${o.fechaEnvio}</div>
+          <div style="font-size:12px;color:var(--so)">Dr. ${o.medico||'—'} ${o.motivoDesc?'· Desc: '+o.motivoDesc:''}</div>
+          ${o.notas?`<div style="font-size:12px;color:var(--so);font-style:italic">📝 ${o.notas}</div>`:''}
+        </div>
+        <div style="text-align:right">
+          ${o.descuento>0?`<div style="font-size:11px;color:var(--so);text-decoration:line-through">$${o.monto.toFixed(2)}</div>`:''}
+          <div style="font-size:20px;font-weight:700;color:var(--ac2)">$${o.total.toFixed(2)}</div>
+          ${o.descuento>0?`<div style="font-size:11px;color:var(--am)">Desc. $${o.descuento.toFixed(2)}</div>`:''}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="pill pg2" style="flex:1" onclick="finEjecutarOrden('${o.id}')">💵 Cobrar</button>
+        <button class="pill pr2" onclick="finCancelarOrden('${o.id}')">✕ Cancelar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function finActualizarBadgePendientes(){
+  const arr = finOrdenesGet();
+  const n = arr.length;
+  // Badge barra superior
+  const badge = document.getElementById('badge-cobros-pendientes');
+  const num = document.getElementById('badge-cobros-num');
+  if(badge){ badge.style.display = n>0 ? '' : 'none'; }
+  if(num){ num.textContent = n; }
+  // Badge tab
+  const tabBadge = document.getElementById('fin-badge-pend');
+  if(tabBadge){ tabBadge.style.display = n>0?'':'none'; tabBadge.textContent=n; }
+}
+
 </script>
 <script src="main.js"></script>
+
+<!-- ══════════════════════════════════════════════════════════
+     COBRO RÁPIDO — Modal + Estilos
+══════════════════════════════════════════════════════════ -->
+<style>
+#qpay-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);
+  z-index:10000;align-items:center;justify-content:center;padding:12px;
+}
+#qpay-overlay.open{display:flex;}
+#qpay-modal{
+  background:var(--bg2,#161B22);border:1px solid var(--bd,#30363d);
+  border-radius:16px;width:100%;max-width:500px;max-height:94vh;
+  overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.7);
+  animation:qpi .18s ease;
+}
+@keyframes qpi{from{transform:translateY(16px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+.qph{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px 12px;border-bottom:1px solid var(--bd,#30363d);}
+.qph h3{margin:0;font-size:15px;font-weight:800;color:var(--ac2,#3fb68b);}
+.qph-close{background:none;border:none;color:var(--so,#8b949e);font-size:20px;cursor:pointer;padding:0 4px;line-height:1;}
+
+/* Tabs modo */
+.qp-tabs{display:flex;gap:0;border-bottom:1px solid var(--bd,#30363d);}
+.qp-tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:700;
+  cursor:pointer;color:var(--so,#8b949e);border:none;background:none;
+  border-bottom:2px solid transparent;transition:all .15s;}
+.qp-tab.active{color:var(--ac2,#3fb68b);border-bottom-color:var(--ac2,#3fb68b);}
+
+.qpb{padding:16px 20px;display:flex;flex-direction:column;gap:11px;}
+.qpr{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.qpf{display:flex;flex-direction:column;gap:3px;}
+.qpf.full{grid-column:span 2;}
+.qpl{font-size:10px;font-weight:700;color:var(--so,#8b949e);text-transform:uppercase;letter-spacing:.5px;}
+.qpi2{background:var(--bg,#0d1117);border:1px solid var(--bd,#30363d);
+  border-radius:8px;color:var(--tx,#e6edf3);font-size:13px;
+  padding:8px 10px;width:100%;box-sizing:border-box;outline:none;transition:border-color .15s;}
+.qpi2:focus{border-color:var(--ac2,#3fb68b);}
+.qpi2:disabled{opacity:.45;cursor:not-allowed;}
+
+.qp-total-box{
+  background:rgba(63,182,139,.1);border:1px solid rgba(63,182,139,.3);
+  border-radius:10px;padding:11px 14px;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.qp-total-label{font-size:12px;color:var(--so,#8b949e);}
+.qp-total-val{font-size:24px;font-weight:900;color:var(--ac2,#3fb68b);}
+
+.qpfoot{padding:0 20px 18px;display:flex;gap:8px;flex-wrap:wrap;}
+.qpbtn{flex:1;border:none;border-radius:10px;padding:12px 10px;
+  font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;}
+.qpbtn:hover{opacity:.85;}
+.qpbtn-ok{background:linear-gradient(135deg,#3fb68b,#2d9c72);color:#fff;}
+.qpbtn-orden{background:rgba(227,161,63,.2);border:1px solid rgba(227,161,63,.5)!important;color:var(--am,#e3a13f);}
+.qpbtn-cancel{background:none;border:1px solid var(--bd,#30363d)!important;
+  color:var(--so,#8b949e);flex:0 0 auto;padding:12px 16px;}
+
+.qp-rol-tag{
+  font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;
+  background:rgba(63,182,139,.15);color:var(--ac2,#3fb68b);
+  margin-left:8px;vertical-align:middle;
+}
+</style>
+
+<!-- MODAL -->
+<div id="qpay-overlay" onclick="qpayCerrarClick(event)">
+ <div id="qpay-modal">
+  <div class="qph">
+    <h3>💳 Cobro Rápido <span class="qp-rol-tag" id="qp-rol-tag">—</span></h3>
+    <button class="qph-close" onclick="qpayCerrarModal()">✕</button>
+  </div>
+
+  <div class="qpb">
+    <!-- Concepto -->
+    <div class="qpf">
+      <span class="qpl">Concepto de cobro</span>
+      <select class="qpi2" id="qp-concepto" onchange="qpayCargarConcepto()">
+        <option value="">— Seleccionar concepto —</option>
+      </select>
+    </div>
+    <div class="qpr">
+      <!-- Paciente -->
+      <div class="qpf full">
+        <span class="qpl">Paciente</span>
+        <input class="qpi2" id="qp-paciente" placeholder="Nombre del paciente"
+               list="qp-pac-list" autocomplete="off">
+        <datalist id="qp-pac-list"></datalist>
+      </div>
+      <!-- Tipo -->
+      <div class="qpf">
+        <span class="qpl">Tipo de consulta</span>
+        <select class="qpi2" id="qp-tipo">
+          <option value="primera">Primera vez</option>
+          <option value="subsecuente">Subsecuente</option>
+          <option value="urgencia">Urgencia</option>
+          <option value="procedimiento">Procedimiento</option>
+          <option value="otro">Otro</option>
+        </select>
+      </div>
+      <!-- Forma de pago (solo visible si cobra directo) -->
+      <div class="qpf" id="qp-forma-wrap">
+        <span class="qpl">Forma de pago</span>
+        <select class="qpi2" id="qp-forma">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="tarjeta">💳 Tarjeta</option>
+          <option value="transferencia">📲 Transferencia</option>
+          <option value="cheque">🏦 Cheque</option>
+        </select>
+      </div>
+      <!-- Monto -->
+      <div class="qpf">
+        <span class="qpl">Monto ($)</span>
+        <input class="qpi2" id="qp-monto" type="number" min="0" step="0.01"
+               placeholder="0.00" oninput="qpayCalc()">
+      </div>
+      <!-- Descuento -->
+      <div class="qpf">
+        <span class="qpl">Descuento ($)</span>
+        <input class="qpi2" id="qp-descuento" type="number" min="0" step="0.01"
+               placeholder="0.00" oninput="qpayCalc()">
+      </div>
+    </div>
+    <!-- Notas -->
+    <div class="qpf">
+      <span class="qpl">Notas (opcional)</span>
+      <input class="qpi2" id="qp-notas" placeholder="Observaciones...">
+    </div>
+    <!-- Total -->
+    <div class="qp-total-box">
+      <span class="qp-total-label">Total a cobrar</span>
+      <span class="qp-total-val" id="qp-total">$0.00</span>
+    </div>
+  </div>
+
+  <div class="qpfoot" id="qp-footer">
+    <!-- botones se inyectan por JS según rol -->
+  </div>
+ </div>
+</div>
+
+<script>
+// ══ COBRO RÁPIDO ══════════════════════════════════════════
+function qpayRol(){
+  try{
+    const su = (typeof sessionUser!=='undefined') ? sessionUser : null;
+    return su?.rol || su?.role || 'medico';
+  }catch(e){ return 'medico'; }
+}
+
+function qpayAbrir(){
+  const rol = qpayRol();
+  // Etiqueta de rol
+  const tag = document.getElementById('qp-rol-tag');
+  if(tag){
+    const map = {admin:'Admin',medico:'Médico',recepcion:'Recepción',enfermera:'Enfermera'};
+    tag.textContent = map[rol] || rol;
+  }
+
+  // Poblar conceptos
+  const sel = document.getElementById('qp-concepto');
+  if(sel && typeof cfgConceptosGetConDefault==='function'){
+    const arr = cfgConceptosGetConDefault();
+    sel.innerHTML = '<option value="">— Seleccionar concepto —</option>' +
+      arr.map(c=>`<option value="${c.id}" data-precio="${c.precio}" data-desc="${c.descuento}">${c.nombre} — $${(c.precio||0).toFixed(2)}</option>`).join('');
+  }
+
+  // Poblar datalist pacientes
+  const dl = document.getElementById('qp-pac-list');
+  if(dl){
+    try{
+      const pacs = typeof expGetAll==='function' ? expGetAll() :
+                   typeof LS!=='undefined' ? (LS.get('medbc_expedientes',[])) : [];
+      dl.innerHTML = pacs.map(p=>`<option value="${(p.nombre||p.paciente||'').trim()}"></option>`).join('');
+    }catch(e){}
+  }
+
+  // Limpiar campos
+  ['qp-paciente','qp-monto','qp-descuento','qp-notas'].forEach(id=>{
+    const el=document.getElementById(id); if(el){el.value='';el.disabled=false;}
+  });
+  const cs=document.getElementById('qp-concepto'); if(cs) cs.value='';
+  document.getElementById('qp-total').textContent='$0.00';
+
+  // Botones según rol
+  const footer = document.getElementById('qp-footer');
+  const formaWrap = document.getElementById('qp-forma-wrap');
+  if(rol==='recepcion'){
+    // Recepción: solo puede enviar orden a cobro (o cobrar si hay orden pendiente)
+    formaWrap.style.display='';
+    footer.innerHTML=`
+      <button class="qpbtn qpbtn-cancel" onclick="qpayCerrarModal()">Cancelar</button>
+      <button class="qpbtn qpbtn-ok" onclick="qpayEjecutar('cobrar')">💵 Cobrar ahora</button>`;
+  } else {
+    // Médico / Admin: puede cobrar directo O enviar a recepción
+    formaWrap.style.display='';
+    footer.innerHTML=`
+      <button class="qpbtn qpbtn-cancel" onclick="qpayCerrarModal()">Cancelar</button>
+      <button class="qpbtn qpbtn-orden" onclick="qpayEjecutar('orden')">📤 Enviar a Recepción</button>
+      <button class="qpbtn qpbtn-ok" onclick="qpayEjecutar('cobrar')">✅ Cobrar directo</button>`;
+  }
+
+  document.getElementById('qpay-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('qp-paciente')?.focus(), 80);
+}
+
+function qpayCerrarModal(){
+  document.getElementById('qpay-overlay').classList.remove('open');
+}
+function qpayCerrarClick(e){
+  if(e.target===document.getElementById('qpay-overlay')) qpayCerrarModal();
+}
+
+function qpayCargarConcepto(){
+  const sel=document.getElementById('qp-concepto');
+  if(!sel||!sel.value) return;
+  const opt=sel.options[sel.selectedIndex];
+  const precio=parseFloat(opt.dataset.precio)||0;
+  const permiteDesc=opt.dataset.desc==='true';
+  const mEl=document.getElementById('qp-monto');
+  const dEl=document.getElementById('qp-descuento');
+  if(mEl) mEl.value=precio.toFixed(2);
+  if(dEl){ dEl.value='0'; dEl.disabled=!permiteDesc; }
+  qpayCalc();
+}
+
+function qpayCalc(){
+  const m=parseFloat(document.getElementById('qp-monto')?.value)||0;
+  const d=parseFloat(document.getElementById('qp-descuento')?.value)||0;
+  const t=Math.max(0,m-d);
+  const el=document.getElementById('qp-total');
+  if(el) el.textContent='$'+t.toFixed(2);
+}
+
+function qpayEjecutar(modo){
+  const pac  =document.getElementById('qp-paciente')?.value.trim()||'';
+  const monto=parseFloat(document.getElementById('qp-monto')?.value)||0;
+  const desc =parseFloat(document.getElementById('qp-descuento')?.value)||0;
+  const total=Math.max(0,monto-desc);
+  const tipo =document.getElementById('qp-tipo')?.value||'primera';
+  const forma=document.getElementById('qp-forma')?.value||'efectivo';
+  const notas=document.getElementById('qp-notas')?.value.trim()||'';
+  const cSel =document.getElementById('qp-concepto');
+  const concepto=cSel?.options[cSel.selectedIndex]?.text||'';
+  const su=(typeof sessionUser!=='undefined')?sessionUser:null;
+
+  if(!pac){ typeof toast==='function'&&toast('⚠️ Ingresa el nombre del paciente','err'); return; }
+  if(!monto){ typeof toast==='function'&&toast('⚠️ Ingresa el monto','err'); return; }
+
+  if(modo==='orden'){
+    // Enviar orden de cobro a recepción
+    if(typeof finOrdenesGet==='function'&&typeof finOrdenesSave==='function'&&typeof finUID==='function'){
+      const orden={
+        id:finUID(), estado:'pendiente',
+        paciente:pac, tipoConsulta:tipo, concepto,
+        monto, descuento:desc, motivoDesc:'',
+        total, notas,
+        medico:su?.nombre||su?.usuario||'',
+        fechaEnvio:new Date().toLocaleString('es-MX'),
+        hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})
+      };
+      const arr=finOrdenesGet(); arr.push(orden); finOrdenesSave(arr);
+      if(typeof finActualizarBadgePendientes==='function') finActualizarBadgePendientes();
+    }
+    qpayCerrarModal();
+    typeof toast==='function'&&toast(`📤 Orden enviada a Recepción — ${pac} · $${total.toFixed(2)}`);
+    typeof logActividad==='function'&&logActividad(`📤 Cobro enviado a recepción: ${pac} · $${total.toFixed(2)}`);
+  } else {
+    // Cobrar directo
+    if(typeof finGet==='function'&&typeof finSave==='function'&&typeof finUID==='function'){
+      const reg={
+        id:finUID(), tipo:'consulta',
+        paciente:pac, tipoConsulta:tipo, concepto,
+        monto, descuento:desc,
+        pctDescuento:monto>0?+((desc/monto)*100).toFixed(1):0,
+        motivoDesc:'', total, formaPago:forma,
+        medico:su?.nombre||su?.usuario||'',
+        medicoId:su?.user||su?.usuario||'',
+        fecha:new Date().toISOString().slice(0,10),
+        hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
+        notas,
+        creadoPor:su?.usuario||'',
+        creadoEn:new Date().toLocaleString('es-MX')
+      };
+      const arr=finGet(); arr.push(reg); finSave(arr);
+      if(typeof finRenderStats==='function') finRenderStats();
+    }
+    qpayCerrarModal();
+    typeof toast==='function'&&toast(`✅ Cobro registrado — ${pac} · $${total.toFixed(2)}`);
+    typeof logActividad==='function'&&logActividad(`💰 Cobro rápido: ${pac} · $${total.toFixed(2)}`);
+  }
+}
+
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') qpayCerrarModal(); });
+</script>
 </body>
