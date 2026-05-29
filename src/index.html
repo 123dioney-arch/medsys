@@ -204,6 +204,17 @@ function hcxCKD(){
     </div>
   </div>`;
 }
+// ── Alvarado (Apendicitis) — HC ──
+function hcxAlvarado(){
+  const ids = ['halv-migra','halv-anorex','halv-nausea','halv-fid','halv-def','halv-elev','halv-leuco','halv-desvio'];
+  const pts  = [2, 1, 1, 2, 1, 1, 2, 1];
+  const s = ids.reduce((t,id,i) => t + (document.getElementById(id)?.checked ? pts[i] : 0), 0);
+  const rec = s <= 3 ? '🟢 Bajo riesgo — Observación / alta'
+            : s <= 6 ? '🟡 Riesgo moderado — Observación / imagen'
+            : '🔴 Alto riesgo — Cirugía probable';
+  const col = s <= 3 ? 'var(--ac2)' : s <= 6 ? 'var(--am)' : 'var(--rd)';
+  xcRb('halv-r', s + ' / 10 puntos', rec, col);
+}
 // ── CKD-EPI + MDRD — Expediente ──
 function xcCKD(){
   const cr = parseFloat(document.getElementById('xckd-cr')?.value)||0;
@@ -3105,6 +3116,22 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
           <div style="font-size:9px;color:var(--mu);margin-top:6px">CKD-EPI sin coeficiente de raza (KDIGO 2024)</div>
         </div>
 
+        <!-- Alvarado (Apendicitis) -->
+        <div class="card" style="background:var(--sf)"><div class="ct">🔪 Alvarado (Apendicitis aguda)</div>
+          <div style="display:flex;flex-direction:column;gap:4px;font-size:12px;margin-bottom:8px">
+            <label><input type="checkbox" id="halv-migra"  onchange="hcxAlvarado()"> Migración del dolor a FID (+2)</label>
+            <label><input type="checkbox" id="halv-anorex" onchange="hcxAlvarado()"> Anorexia / acetona en orina (+1)</label>
+            <label><input type="checkbox" id="halv-nausea" onchange="hcxAlvarado()"> Náusea / vómito (+1)</label>
+            <label><input type="checkbox" id="halv-fid"    onchange="hcxAlvarado()"> Dolor a la palpación en FID (+2)</label>
+            <label><input type="checkbox" id="halv-def"    onchange="hcxAlvarado()"> Dolor de rebote / descompresión (+1)</label>
+            <label><input type="checkbox" id="halv-elev"   onchange="hcxAlvarado()"> Temperatura ≥37.3 °C (+1)</label>
+            <label><input type="checkbox" id="halv-leuco"  onchange="hcxAlvarado()"> Leucocitosis >10,000/mm³ (+2)</label>
+            <label><input type="checkbox" id="halv-desvio" onchange="hcxAlvarado()"> Desviación a la izquierda (+1)</label>
+          </div>
+          <div id="halv-r"></div>
+          <div style="font-size:9px;color:var(--mu);margin-top:6px">Score MANTRELS · 1-3: baja prob. · 4-6: moderada · 7-10: alta (cx)</div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -4033,7 +4060,7 @@ function toggleDxClin(inpId, listId) {
   <div class="ph"><div class="pt">👶 Pediatría Integral</div><div class="ps">Dosis · Curvas OMS · Scores · 25 medicamentos</div></div>
 
   <!-- Pestañas -->
-  <div class="tabs" style="margin-bottom:14px">
+  <div class="tab-bar" style="margin-bottom:14px">
     <!-- Tab Calculadora Dosis desactivado temporalmente por revisión de fórmulas -->
     <!-- <div class="tab" onclick="stab('ped','dosis')">💊 Calculadora Dosis</div> -->
     <div class="tab active" onclick="stab('ped','curvas')">📈 Curvas de Crecimiento OMS</div>
@@ -6246,6 +6273,11 @@ function showPage(page){
     }
     setHCEsp(espKey, false);
     hcgActualizarBloques();
+    // Cerrar panel de calculadoras al entrar a HC (evita que quede abierto de sesión anterior)
+    const hcCalcsBody = document.getElementById('hc-calcs-body');
+    const hcCalcsArrow = document.getElementById('hc-calcs-arrow');
+    if(hcCalcsBody) hcCalcsBody.style.display = 'none';
+    if(hcCalcsArrow) hcCalcsArrow.style.transform = '';
   }
   if(page==='expediente'){renderExpLista();document.getElementById('exp-lista').style.display='block';document.getElementById('exp-detalle').style.display='none';}
   // Al salir del expediente, limpiar paciente activo para que Receta/Estudios no hereden datos
