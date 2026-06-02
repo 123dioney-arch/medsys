@@ -25,6 +25,15 @@
 // El manifest PWA no aplica en Tauri (app nativa).
 // Se omite URL.createObjectURL para el manifest.
 
+// ── Helper: fecha local YYYY-MM-DD (evita desfase UTC) ──
+function fechaHoy(d){
+  const f = d || new Date();
+  const y = f.getFullYear();
+  const m = String(f.getMonth()+1).padStart(2,'0');
+  const dd = String(f.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+
 // ══════════════════════════════════════════════════════════
 // CALCULADORAS INTEGRADAS — Expediente (prefijo xc) y HC (prefijo hcx)
 // ══════════════════════════════════════════════════════════
@@ -811,6 +820,9 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
 .fin-row:last-child{border-bottom:none}
 .fin-row-consulta{grid-template-columns:1fr 90px 80px 80px 90px 28px}
 .fin-row-mov{grid-template-columns:80px 100px 1fr 90px 80px 70px 28px}
+.fin-bal-tab{padding:6px 16px;border-radius:20px;border:1px solid var(--bd);background:var(--card);color:var(--so);font-size:12px;font-weight:600;cursor:pointer;transition:.2s}
+.fin-bal-tab:hover{border-color:var(--ac);color:var(--ac)}
+.fin-bal-tab-act{background:var(--ac)!important;color:#fff!important;border-color:var(--ac)!important}
 .fin-badge-ing{background:rgba(63,182,139,.15);color:var(--ac2);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700}
 .fin-badge-egr{background:rgba(248,81,73,.15);color:var(--rd);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700}
 .fin-badge-cons{background:rgba(46,168,224,.15);color:var(--ac);border-radius:5px;padding:2px 8px;font-size:10px;font-weight:700}
@@ -1035,6 +1047,12 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
 
         <label class="lbl">Nombre de la clínica / consultorio</label>
         <input class="inp" id="reg-clinica" placeholder="Clínica Santa María">
+
+        <label class="lbl">Tipo de cuenta</label>
+        <select class="inp" id="reg-tipo" onchange="regTipoCambio()">
+          <option value="admin">🏥 Administrador — Nueva clínica independiente</option>
+          <option value="medico">👨‍⚕️ Médico — Unirme a una clínica existente (requiere código)</option>
+        </select>
 
         <label class="lbl">Teléfono</label>
         <input class="inp" id="reg-tel" placeholder="+52 000 000 0000">
@@ -2156,9 +2174,18 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
     <button onclick="cerrarModalBloqueo()" style="position:absolute;top:14px;right:14px;background:var(--card);border:1px solid var(--bd);border-radius:7px;padding:4px 11px;color:var(--so);cursor:pointer;font-size:13px;font-family:inherit">✕</button>
     <h2 style="font-size:16px;font-weight:800;margin-bottom:4px">🚫 Bloquear Horarios</h2>
     <p style="font-size:12px;color:var(--so);margin-bottom:16px">Las horas bloqueadas aparecen en el calendario y no permiten agendar citas.</p>
-    <div style="display:flex;gap:6px;margin-bottom:16px">
+    <!-- Campo "Solicitado por" — visible solo para recepción -->
+    <div id="bloq-solicitante-wrap" style="display:none;margin-bottom:14px;background:rgba(46,168,224,.08);border:1px solid rgba(46,168,224,.25);border-radius:10px;padding:12px">
+      <label class="lbl" style="color:var(--ac)">👤 Solicitado por *</label>
+      <select class="inp" id="bloq-solicitante" style="margin-top:4px">
+        <option value="">— Seleccionar quién solicitó el bloqueo —</option>
+      </select>
+      <div style="font-size:11px;color:var(--so);margin-top:5px">⚠️ Indica quién te pidió bloquear este horario.</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
       <button id="btab-hora" class="pill pb" onclick="bloqueoTab('hora')" style="font-size:12px">🕐 Hora recurrente</button>
       <button id="btab-dia" class="pill pn" onclick="bloqueoTab('dia')" style="font-size:12px">📅 Día completo</button>
+      <button id="btab-unica" class="pill pn" onclick="bloqueoTab('unica')" style="font-size:12px">📌 Hora específica</button>
     </div>
     <div id="bpanel-hora">
       <div style="font-size:12px;color:var(--so);margin-bottom:10px">Bloquea una hora específica en todos los días seleccionados de la semana.</div>
@@ -2198,6 +2225,21 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
         </div>
       </div>
       <button class="pill pr2" style="width:100%;margin-top:6px" onclick="guardarBloqueoDia()">🚫 Bloquear día(s)</button>
+    </div>
+    <div id="bpanel-unica" style="display:none">
+      <div style="font-size:12px;color:var(--so);margin-bottom:10px">Bloquea una hora puntual en una fecha específica.</div>
+      <div class="fr" style="gap:10px">
+        <div class="fg"><label class="lbl">Fecha *</label>
+          <input class="inp" type="date" id="bloq-unica-fecha">
+        </div>
+        <div class="fg"><label class="lbl">Hora *</label>
+          <input class="inp" type="time" id="bloq-unica-hora" value="09:00">
+        </div>
+        <div class="fg" style="grid-column:span 2"><label class="lbl">Motivo</label>
+          <input class="inp" id="bloq-unica-motivo" placeholder="Ej: Cita personal, procedimiento, reunión...">
+        </div>
+      </div>
+      <button class="pill pr2" style="width:100%;margin-top:6px" onclick="guardarBloqueoUnica()">🚫 Bloquear esta hora</button>
     </div>
     <div style="margin-top:18px;border-top:1px solid var(--bd);padding-top:14px">
       <div style="font-size:12px;font-weight:700;color:var(--so);margin-bottom:8px">📋 Bloqueos activos</div>
@@ -4571,6 +4613,21 @@ function toggleDxClin(inpId, listId) {
     </div>
 
     <div class="card">
+      <div class="ct">🤖 Respaldo Automático</div>
+      <div style="font-size:13px;color:var(--so);margin-bottom:12px;line-height:1.7">
+        Al cerrar sesión se genera automáticamente un respaldo en <strong style="color:var(--tx)">Supabase</strong> y un <strong style="color:var(--tx)">archivo .json local</strong>.
+      </div>
+      <div id="auto-backup-status" style="font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(63,182,139,.08);border:1px solid rgba(63,182,139,.25);color:var(--ac2)">
+        ✅ Activo — se ejecuta al hacer clic en "Cerrar sesión"
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--mu)">
+        💡 Para Supabase: crea la tabla <code style="color:var(--ac)">medbc_respaldos</code> con columnas:
+        <code style="color:var(--so)">id text, gid text, usuario text, fecha text, datos text, tipo text</code>
+      </div>
+      <button class="pill pg2" style="margin-top:10px" onclick="autoRespaldoAlLogout().then(()=>toast('✅ Respaldo manual completado'))">💾 Hacer respaldo ahora</button>
+    </div>
+
+    <div class="card">
       <div class="ct">⏰ Historial de Respaldos</div>
       <div id="backup-history" style="font-size:12px"></div>
       <button class="pill pn" style="margin-top:9px" onclick="limpiarHistorialRespaldos()">🗑️ Limpiar historial</button>
@@ -4921,13 +4978,13 @@ function toggleDxClin(inpId, listId) {
   <div class="ph"><div class="pt">⚙️ Configuración</div><div class="ps">Personaliza el sistema, datos del médico y preferencias de impresión</div></div>
   <div class="tab-bar">
     <div class="tab active" onclick="stab('cfg','medico')">👨‍⚕️ Datos Médico</div>
-    <div class="tab" onclick="stab('cfg','apariencia')">🎨 Apariencia</div>
-    <div class="tab" onclick="stab('cfg','impresion')">🖨️ Impresión</div>
+    <div class="tab cfg-tab-nomedico" onclick="stab('cfg','apariencia')">🎨 Apariencia</div>
+    <div class="tab cfg-tab-medico" onclick="stab('cfg','impresion')">🖨️ Impresión</div>
     <div class="tab cfg-tab-admin" onclick="stab('cfg','sistema')">🔧 Sistema</div>
     <div class="tab cfg-tab-admin" onclick="stab('cfg','nube')">☁️ Supabase</div>
     <div class="tab cfg-tab-admin" onclick="stab('cfg','backup')">💾 Respaldo</div>
-    <div class="tab cfg-tab-admin" onclick="stab('cfg','actualizaciones')" id="tab-updates">🔄 Actualizaciones</div>
-    <div class="tab cfg-tab-admin" onclick="stab('cfg','instalar')">📲 Instalar app</div>
+
+
     <div class="tab cfg-tab-admin" onclick="stab('cfg','legal')">⚖️ Legal</div>
     <div class="tab cfg-tab-admin" onclick="stab('cfg','auditoria');renderAuditoria()">📋 Bitácora</div>
     <div class="tab cfg-tab-admin" onclick="stab('cfg','conceptos');cfgRenderConceptos()">💲 Conceptos de Cobro</div>
@@ -5370,190 +5427,36 @@ function toggleDxClin(inpId, listId) {
       </div>
     </div>
 
+    <div class="card" style="border-left:4px solid var(--ac2)">
+      <div class="ct">🤖 Respaldo Automático al Cerrar Sesión</div>
+      <div style="font-size:13px;color:var(--so);margin-bottom:12px;line-height:1.7">
+        Al cerrar sesión se genera automáticamente un respaldo en <strong style="color:var(--tx)">Supabase</strong> y se descarga un <strong style="color:var(--tx)">archivo .json local</strong>.
+      </div>
+      <div id="auto-backup-status" style="font-size:12px;padding:8px 12px;border-radius:8px;background:rgba(63,182,139,.08);border:1px solid rgba(63,182,139,.25);color:var(--ac2);margin-bottom:12px">
+        ✅ Activo — se ejecuta automáticamente al hacer clic en "Salir"
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="pill pg2" onclick="autoRespaldoAlLogout().then(()=>toast('✅ Respaldo manual completado')).catch(()=>toast('⚠ Error al respaldar','err'))">💾 Hacer respaldo ahora</button>
+      </div>
+      <div style="padding:10px;background:rgba(46,168,224,.06);border:1px solid rgba(46,168,224,.2);border-radius:8px;font-size:11px;color:var(--so)">
+        💡 Para respaldo en Supabase crea la tabla <code style="color:var(--ac)">medbc_respaldos</code> con columnas:<br>
+        <code style="color:var(--mu)">id text, gid text, usuario text, fecha text, datos text, tipo text</code>
+      </div>
+    </div>
+
+    <div class="card"><div class="ct">⏰ Historial de Respaldos</div>
+      <div id="backup-history" style="font-size:12px"></div>
+      <button class="pill pn" style="margin-top:9px" onclick="limpiarHistorialRespaldos()">🗑️ Limpiar historial</button>
+    </div>
+
     <div class="card"><div class="ct">📋 Resumen de datos guardados</div>
       <div id="backup-summary" style="font-size:13px;line-height:2;color:var(--so)"></div>
     </div>
   </div><!-- /cfg-backup -->
 
-  <!-- ── ACTUALIZACIONES ── -->
-  <div id="cfg-actualizaciones" class="tc">
-    <div class="card">
-      <div class="ct">🔄 Estado de la versión</div>
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 0">
-        <div style="background:rgba(63,182,139,.1);border:1px solid rgba(63,182,139,.3);border-radius:10px;padding:14px 20px;flex:1;min-width:180px">
-          <div style="font-size:11px;color:var(--so);font-weight:700;letter-spacing:.5px;text-transform:uppercase">Versión instalada</div>
-          <div style="font-size:26px;font-weight:800;color:var(--ac2);font-family:'DM Mono'" id="cfg-ver-actual">10.0.0</div>
-        </div>
-        <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px 20px;flex:1;min-width:180px">
-          <div style="font-size:11px;color:var(--so);font-weight:700;letter-spacing:.5px;text-transform:uppercase">Última revisión</div>
-          <div style="font-size:13px;font-weight:700;color:var(--tx);margin-top:4px" id="cfg-last-check">—</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
-        <button class="pill pb" onclick="checkForUpdates(false)">🔍 Buscar actualizaciones ahora</button>
-        <button class="pill pg2" onclick="exportBackupBeforeUpdate()">💾 Respaldo antes de actualizar</button>
-      </div>
-    </div>
 
-    <div class="card">
-      <div class="ct">⚙️ Configurar servidor de actualizaciones</div>
-      <p style="font-size:12px;color:var(--so);margin-bottom:14px;line-height:1.6">
-        El sistema busca actualizaciones en la URL que configures. Puedes usar <b>GitHub</b> (gratis) 
-        o cualquier servidor web. Cada actualización conserva tus expedientes y datos.
-      </p>
-      <div class="fg" style="margin-bottom:11px">
-        <label class="lbl">URL del archivo version.json</label>
-        <input class="inp" id="cfg-upd-url" placeholder="https://raw.githubusercontent.com/TU_USUARIO/medbc-pro/main/version.json"
-          value="" oninput="saveUpdConfig()">
-      </div>
-      <div class="fr">
-        <div class="fg">
-          <label class="lbl">Revisar cada (horas)</label>
-          <select class="inp" id="cfg-upd-interval" onchange="saveUpdConfig()">
-            <option value="1">1 hora</option>
-            <option value="3">3 horas</option>
-            <option value="6" selected>6 horas</option>
-            <option value="12">12 horas</option>
-            <option value="24">24 horas</option>
-            <option value="0">Manual (sin revisión automática)</option>
-          </select>
-        </div>
-        <div class="fg">
-          <label class="lbl">Notificaciones</label>
-          <select class="inp" id="cfg-upd-notify" onchange="saveUpdConfig()">
-            <option value="banner">Banner en pantalla</option>
-            <option value="toast">Solo notificación breve</option>
-            <option value="none">Sin notificaciones</option>
-          </select>
-        </div>
-      </div>
 
-      <div style="background:rgba(46,168,224,.06);border:1px solid rgba(46,168,224,.2);border-radius:10px;padding:13px;margin-top:10px">
-        <div style="font-weight:700;color:var(--ac);font-size:13px;margin-bottom:8px">📖 Cómo configurar GitHub (gratuito):</div>
-        <ol style="font-size:12px;color:var(--so);line-height:2;padding-left:18px">
-          <li>Crea una cuenta en <b style="color:var(--tx)">github.com</b> (gratis)</li>
-          <li>Crea un repositorio nuevo llamado <b style="color:var(--tx)">medbc-pro</b></li>
-          <li>Sube el archivo <b style="color:var(--tx)">version.json</b> (ve el ejemplo abajo)</li>
-          <li>Copia la URL "Raw" del archivo y pégala arriba</li>
-          <li>Cuando quieras actualizar, sube el nuevo HTML y edita version.json</li>
-        </ol>
-      </div>
 
-      <div style="margin-top:14px">
-        <div class="ct">📄 Ejemplo de version.json</div>
-        <pre style="background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:13px;font-size:11px;color:var(--ac2);overflow-x:auto;font-family:'DM Mono',monospace;line-height:1.7">{
-  "version": "10.1.0",
-  "fecha": "2026-04-22",
-  "url": "https://raw.githubusercontent.com/TU_USUARIO/medbc-pro/main/MedBC Pro.html",
-  "notas": [
-    "✅ 50 nuevos medicamentos agregados",
-    "🐛 Corrección en generación de recetas",
-    "⚡ Mejora de velocidad en búsqueda"
-  ],
-  "critica": false
-}</pre>
-        <button class="pill pn" style="margin-top:8px" onclick="copyVersionJsonExample()">📋 Copiar ejemplo</button>
-      </div>
-    </div>
-
-    <div class="card" id="cfg-historial-upd">
-      <div class="ct">📋 Historial de actualizaciones</div>
-      <div id="upd-historial-list" style="font-size:13px;color:var(--so)">Sin actualizaciones registradas.</div>
-    </div>
-  </div><!-- /cfg-actualizaciones -->
-
-  <!-- ── INSTALAR APP ── -->
-  <div id="cfg-instalar" class="tc">
-    <div class="card" style="text-align:center;padding:28px">
-      <div style="font-size:48px;margin-bottom:10px">📲</div>
-      <div style="font-size:18px;font-weight:800;margin-bottom:6px">Instalar MedBC Pro como app</div>
-      <div style="font-size:13px;color:var(--so);max-width:420px;margin:0 auto 20px;line-height:1.6">
-        Funciona sin internet, abre desde el escritorio o pantalla de inicio, y se ve como una app nativa — sin barra del navegador.
-      </div>
-      <button class="pill pb" style="font-size:14px;padding:12px 28px" onclick="installPWA()">📲 Instalar ahora</button>
-      <div style="font-size:11px;color:var(--mu);margin-top:10px" id="pwa-install-hint">Si el botón no responde, usa las instrucciones de tu dispositivo abajo.</div>
-    </div>
-
-    <!-- Instrucciones por dispositivo -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
-
-      <div class="card" style="border-top:3px solid #4CAF50">
-        <div style="font-size:22px;margin-bottom:8px">🤖 Android (Chrome)</div>
-        <ol style="font-size:12px;color:var(--so);line-height:2.2;padding-left:18px">
-          <li>Abre MedBC Pro en <b style="color:var(--tx)">Chrome</b></li>
-          <li>Toca el menú <b style="color:var(--tx)">⋮</b> (tres puntos arriba)</li>
-          <li>Selecciona <b style="color:var(--tx)">"Instalar app"</b> o <b style="color:var(--tx)">"Agregar a pantalla de inicio"</b></li>
-          <li>Confirma → aparece el ícono 🏥 en tu pantalla</li>
-        </ol>
-        <div style="background:rgba(76,175,80,.08);border:1px solid rgba(76,175,80,.2);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--so);margin-top:8px">
-          💡 También aparece el botón <b style="color:var(--tx)">📲 Instalar app</b> en la barra superior del sistema
-        </div>
-      </div>
-
-      <div class="card" style="border-top:3px solid #2196F3">
-        <div style="font-size:22px;margin-bottom:8px">🍎 iPhone / iPad (Safari)</div>
-        <ol style="font-size:12px;color:var(--so);line-height:2.2;padding-left:18px">
-          <li>Abre MedBC Pro en <b style="color:var(--tx)">Safari</b> (obligatorio, no Chrome)</li>
-          <li>Toca el botón <b style="color:var(--tx)">□↑ Compartir</b> (abajo en iPhone, arriba en iPad)</li>
-          <li>Desliza y toca <b style="color:var(--tx)">"Agregar a pantalla de inicio"</b></li>
-          <li>Confirma con <b style="color:var(--tx)">Agregar</b></li>
-        </ol>
-        <div style="background:rgba(33,150,243,.08);border:1px solid rgba(33,150,243,.2);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--so);margin-top:8px">
-          ⚠️ En iPhone solo funciona desde <b style="color:var(--tx)">Safari</b> — Chrome en iOS no soporta instalación
-        </div>
-      </div>
-
-      <div class="card" style="border-top:3px solid #9C27B0">
-        <div style="font-size:22px;margin-bottom:8px">🖥️ Windows / Mac (Chrome o Edge)</div>
-        <ol style="font-size:12px;color:var(--so);line-height:2.2;padding-left:18px">
-          <li>Abre MedBC Pro en <b style="color:var(--tx)">Chrome</b> o <b style="color:var(--tx)">Edge</b></li>
-          <li>En la barra de dirección busca el ícono <b style="color:var(--tx)">⊕ Instalar</b> (a la derecha)</li>
-          <li>Haz clic → <b style="color:var(--tx)">Instalar</b></li>
-          <li>Abre desde el menú Inicio o escritorio como cualquier programa</li>
-        </ol>
-        <div style="background:rgba(156,39,176,.08);border:1px solid rgba(156,39,176,.2);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--so);margin-top:8px">
-          💡 En Edge: menú <b style="color:var(--tx)">⋯ → Aplicaciones → Instalar este sitio como aplicación</b>
-        </div>
-      </div>
-
-      <div class="card" style="border-top:3px solid #FF9800">
-        <div style="font-size:22px;margin-bottom:8px">📁 Desde archivo local</div>
-        <div style="font-size:12px;color:var(--so);line-height:1.8">
-          Si usas MedBC Pro como archivo <b style="color:var(--tx)">.html</b> (sin servidor), la instalación como PWA <b style="color:var(--tx)">requiere un servidor web</b>. Opciones sencillas:
-        </div>
-        <ol style="font-size:12px;color:var(--so);line-height:2.2;padding-left:18px;margin-top:8px">
-          <li>Sube <code style="background:var(--card);border-radius:4px;padding:1px 5px;font-family:monospace;font-size:11px">MedBC Pro.html</code> a <b style="color:var(--tx)">GitHub Pages</b> (gratis)</li>
-          <li>Comparte esa URL con todos los usuarios</li>
-          <li>Cada uno instala desde su dispositivo con los pasos de arriba</li>
-        </ol>
-        <div style="background:rgba(255,152,0,.08);border:1px solid rgba(255,152,0,.2);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--so);margin-top:8px">
-          💡 GitHub Pages es <b style="color:var(--tx)">gratis</b> — el mismo repositorio que usas para actualizaciones sirve para hospedar la app
-        </div>
-      </div>
-    </div>
-
-    <!-- GitHub Pages paso a paso -->
-    <div class="card" style="margin-top:4px">
-      <div class="ct">🚀 Activar GitHub Pages — Hosting gratuito en 3 pasos</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px">
-        <div style="background:var(--card);border-radius:10px;padding:14px">
-          <div style="font-size:20px;font-weight:800;color:var(--ac);margin-bottom:6px">① Repositorio</div>
-          <div style="font-size:12px;color:var(--so);line-height:1.7">En tu repositorio <b style="color:var(--tx)">medbc-pro</b> en GitHub, ve a <b style="color:var(--tx)">Settings → Pages</b></div>
-        </div>
-        <div style="background:var(--card);border-radius:10px;padding:14px">
-          <div style="font-size:20px;font-weight:800;color:var(--ac);margin-bottom:6px">② Activar</div>
-          <div style="font-size:12px;color:var(--so);line-height:1.7">En <b style="color:var(--tx)">Source</b> selecciona <b style="color:var(--tx)">Deploy from a branch → main → / (root)</b> y guarda</div>
-        </div>
-        <div style="background:var(--card);border-radius:10px;padding:14px">
-          <div style="font-size:20px;font-weight:800;color:var(--ac);margin-bottom:6px">③ Renombrar</div>
-          <div style="font-size:12px;color:var(--so);line-height:1.7">Renombra <b style="color:var(--tx)">MedBC Pro.html</b> a <b style="color:var(--tx)">index.html</b> en GitHub. La URL será:<br><code style="font-size:10px;color:var(--ac2)">tuusuario.github.io/medbc-pro</code></div>
-        </div>
-      </div>
-      <div style="background:rgba(63,182,139,.07);border:1px solid rgba(63,182,139,.2);border-radius:10px;padding:12px;margin-top:12px;font-size:12px;color:var(--so);line-height:1.7">
-        ✅ Una vez en GitHub Pages, cualquier persona que abra <b style="color:var(--tx)">tuusuario.github.io/medbc-pro</b> podrá instalar MedBC Pro como app en su dispositivo. Los datos siguen guardándose <b style="color:var(--tx)">localmente</b> en cada dispositivo — no se suben a ningún servidor.
-      </div>
-    </div>
-  </div><!-- /cfg-instalar -->
 
   <!-- ⚖️ LEGAL -->
   <div id="cfg-legal" class="tc">
@@ -5689,6 +5592,7 @@ function toggleDxClin(inpId, listId) {
     <div class="card">
       <div class="ct">📋 Bitácora de Auditoría — NOM-024-SSA3</div>
       <div style="font-size:12px;color:var(--so);margin-bottom:14px">Registro de todas las acciones del sistema: inicios de sesión, acceso a expedientes, documentos generados y cambios realizados.</div>
+      <div id="audit-aviso-rol" style="font-size:12px;font-weight:600;margin-bottom:10px;padding:7px 11px;background:rgba(46,168,224,.07);border:1px solid rgba(46,168,224,.2);border-radius:8px"></div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
         <input class="inp" id="audit-filtro" placeholder="🔍 Filtrar por usuario, acción..." style="flex:1;min-width:200px" oninput="renderAuditoria()">
         <button class="pill pb" onclick="exportarAuditoria()">⬇ Exportar CSV</button>
@@ -5822,7 +5726,7 @@ function toggleDxClin(inpId, listId) {
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="pill pg2" onclick="finRegistrarConsulta()">✅ Registrar cobro</button>
-        <button class="pill" style="background:var(--am);color:#000;font-weight:700" onclick="finEnviarOrden()">📤 Enviar a cobro (recepción)</button>
+        <button id="fin-btn-enviar-orden" class="pill" style="background:var(--am);color:#000;font-weight:700" onclick="finEnviarOrden()">📤 Enviar a cobro (recepción)</button>
       </div>
     </div>
 
@@ -5895,7 +5799,7 @@ function toggleDxClin(inpId, listId) {
   <!-- ── TAB MOVIMIENTOS ── -->
   <div id="fin-tc-movimientos" class="tc">
     <div class="card">
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
         <div class="ct" style="margin-bottom:0;flex:1">📋 Todos los Movimientos</div>
         <select class="inp" id="fin-fil-tipo" onchange="finRenderMovimientos()" style="width:160px">
           <option value="todos">Todos</option>
@@ -5903,9 +5807,27 @@ function toggleDxClin(inpId, listId) {
           <option value="ingreso">Ingresos</option>
           <option value="egreso">Gastos</option>
         </select>
-        <select class="inp" id="fin-fil-mes" onchange="finRenderMovimientos()" style="width:140px"></select>
         <button class="pill pb" onclick="finExportarCSV()">⬇ Exportar CSV</button>
       </div>
+      <!-- Pestañas de periodo -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--bd);padding-bottom:10px;flex-wrap:wrap;align-items:center">
+        <button id="fin-mov-tab-mes"  onclick="finMovSetPeriodo('mes')"  class="fin-bal-tab fin-bal-tab-act">📆 Mes</button>
+        <button id="fin-mov-tab-anio" onclick="finMovSetPeriodo('anio')" class="fin-bal-tab">📅 Año</button>
+        <button id="fin-mov-tab-dia"  onclick="finMovSetPeriodo('dia')"  class="fin-bal-tab">🗓️ Día</button>
+        <!-- Controles de periodo inline -->
+        <div id="fin-mov-ctrl-mes" style="display:flex;gap:6px;align-items:center;margin-left:6px">
+          <select class="inp" id="fin-fil-mes" onchange="finRenderMovimientos()" style="width:130px"></select>
+          <select class="inp" id="fin-fil-anio-mes" onchange="finRenderMovimientos()" style="width:90px"></select>
+        </div>
+        <div id="fin-mov-ctrl-anio" style="display:none;gap:6px;align-items:center;margin-left:6px">
+          <select class="inp" id="fin-fil-anio" onchange="finRenderMovimientos()" style="width:90px"></select>
+        </div>
+        <div id="fin-mov-ctrl-dia" style="display:none;gap:6px;align-items:center;margin-left:6px">
+          <input type="date" class="inp" id="fin-fil-dia" onchange="finRenderMovimientos()" style="width:170px">
+        </div>
+      </div>
+      <!-- Pestañas de usuario -->
+      <div id="fin-fil-usuario-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--bd)"></div>
       <div id="fin-movimientos-table"></div>
     </div>
   </div>
@@ -5913,11 +5835,20 @@ function toggleDxClin(inpId, listId) {
   <!-- ── TAB BALANCE ── -->
   <div id="fin-tc-balance" class="tc">
     <div class="card">
-      <div class="ct">📊 Balance Mensual / Anual</div>
-      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <div class="ct">📊 Balance</div>
+      <!-- Pestañas de periodo -->
+      <div style="display:flex;gap:6px;margin-bottom:14px;border-bottom:1px solid var(--bd);padding-bottom:12px">
+        <button id="fin-bal-tab-anio" onclick="finBalSetPeriodo('anio')" class="fin-bal-tab fin-bal-tab-act">📅 Año</button>
+        <button id="fin-bal-tab-mes"  onclick="finBalSetPeriodo('mes')"  class="fin-bal-tab">📆 Mes</button>
+        <button id="fin-bal-tab-dia"  onclick="finBalSetPeriodo('dia')"  class="fin-bal-tab">🗓️ Día</button>
+      </div>
+      <!-- Controles según periodo -->
+      <div id="fin-bal-ctrl-anio" style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
         <select class="inp" id="fin-bal-anio" onchange="finRenderBalance()" style="width:120px"></select>
+      </div>
+      <div id="fin-bal-ctrl-mes" style="display:none;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <select class="inp" id="fin-bal-anio-mes" onchange="finRenderBalance()" style="width:120px"></select>
         <select class="inp" id="fin-bal-mes" onchange="finRenderBalance()" style="width:140px">
-          <option value="todos">Todo el año</option>
           <option value="1">Enero</option><option value="2">Febrero</option>
           <option value="3">Marzo</option><option value="4">Abril</option>
           <option value="5">Mayo</option><option value="6">Junio</option>
@@ -5925,6 +5856,9 @@ function toggleDxClin(inpId, listId) {
           <option value="9">Septiembre</option><option value="10">Octubre</option>
           <option value="11">Noviembre</option><option value="12">Diciembre</option>
         </select>
+      </div>
+      <div id="fin-bal-ctrl-dia" style="display:none;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <input type="date" class="inp" id="fin-bal-dia" onchange="finRenderBalance()" style="width:180px">
       </div>
       <div class="fin-stat-grid" id="fin-bal-cards"></div>
       <div style="margin-top:16px">
@@ -5948,9 +5882,20 @@ function toggleDxClin(inpId, listId) {
   <div id="fin-tc-mis-consultas" class="tc">
     <div class="card">
       <div class="ct">🩺 Mis Consultas Registradas</div>
-      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+        <button id="fin-mc-tab-mes"  onclick="finMcSetPeriodo('mes')"  class="fin-bal-tab fin-bal-tab-act">📆 Mes</button>
+        <button id="fin-mc-tab-anio" onclick="finMcSetPeriodo('anio')" class="fin-bal-tab">📅 Año</button>
+        <button id="fin-mc-tab-dia"  onclick="finMcSetPeriodo('dia')"  class="fin-bal-tab">🗓️ Día</button>
+      </div>
+      <div id="fin-mc-ctrl-mes" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
         <select class="inp" id="fin-mc-mes" onchange="finRenderMisConsultas()" style="width:140px"></select>
         <select class="inp" id="fin-mc-anio" onchange="finRenderMisConsultas()" style="width:120px"></select>
+      </div>
+      <div id="fin-mc-ctrl-anio" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <select class="inp" id="fin-mc-anio2" onchange="finRenderMisConsultas()" style="width:120px"></select>
+      </div>
+      <div id="fin-mc-ctrl-dia" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <input type="date" class="inp" id="fin-mc-dia" onchange="finRenderMisConsultas()" style="width:180px">
       </div>
       <div id="fin-mis-consultas-stats" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
       <div id="fin-mis-consultas-table"></div>
@@ -6014,8 +5959,8 @@ function toggleDxClin(inpId, listId) {
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:18px">
-      <button class="pill pg2" style="flex:1" onclick="cobRapidoConfirmar()">✅ Confirmar cobro</button>
-      <button class="pill pn" onclick="cobRapidoCerrar()">Omitir</button>
+      <button class="pill pg2" style="flex:1" id="btn-cobro-confirmar">✅ Confirmar cobro</button>
+      <button class="pill pn" id="btn-cobro-omitir">Omitir</button>
     </div>
   </div>
 </div>
@@ -6144,22 +6089,99 @@ function idbDel(k){
   }));
 }
 // Sync wrapper — reads IndexedDB on init, writes to both IDB + localStorage (sync fallback)
+// ══════════════════════════════════════════════════════════
+// CRYPTO ENGINE — AES-256-GCM para expedientes (NOM-004)
+// Clave derivada del grupo/consultorio (_gid) para que
+// todos los médicos del mismo consultorio puedan descifrar.
+// ══════════════════════════════════════════════════════════
+const CRYPTO_KEYS = ['expedientes'];
+let _cryptoKey = null;
+
+async function cryptoDeriveClave(gid){
+  const enc = new TextEncoder();
+  const passphrase = 'medbc-grupo-' + (gid || 'default');
+  const salt = 'medbc-nom004-v1-' + (gid || 'default');
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt:enc.encode(salt), iterations:100000, hash:'SHA-256' },
+    keyMaterial,
+    { name:'AES-GCM', length:256 },
+    false, ['encrypt','decrypt']
+  );
+}
+
+async function cryptoCifrar(obj, key){
+  const enc = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const cifrado = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, enc.encode(JSON.stringify(obj)));
+  const ivB64  = btoa(String.fromCharCode(...iv));
+  const datB64 = btoa(String.fromCharCode(...new Uint8Array(cifrado)));
+  return 'MEDBC_ENC:' + ivB64 + ':' + datB64;
+}
+
+async function cryptoDescifrar(texto, key){
+  if(typeof texto !== 'string' || !texto.startsWith('MEDBC_ENC:')) return texto;
+  try{
+    const parts = texto.split(':');
+    const iv  = Uint8Array.from(atob(parts[1]), c=>c.charCodeAt(0));
+    const dat = Uint8Array.from(atob(parts[2]), c=>c.charCodeAt(0));
+    const dec = await crypto.subtle.decrypt({name:'AES-GCM',iv}, key, dat);
+    return JSON.parse(new TextDecoder().decode(dec));
+  }catch(e){ log('⚠ Descifrado fallido: '+e.message); return null; }
+}
+
+// Llamar después de activar el grupo (_gid conocido)
+async function cryptoActivarGrupo(gid){
+  _cryptoKey = await cryptoDeriveClave(gid);
+  log('🔐 Cifrado NOM-004 activo para grupo: ' + gid);
+  // Re-cargar expedientes cifrados desde IDB con la nueva clave
+  try{
+    const raw = await idbGet(_k ? _k('expedientes') : 'expedientes').catch(()=>null);
+    if(raw && typeof raw==='string' && raw.startsWith('MEDBC_ENC:')){
+      const dec = await cryptoDescifrar(raw, _cryptoKey);
+      if(dec){
+        const key = (_k ? _k('expedientes') : 'expedientes');
+        _lsCache[key] = dec;
+        if(typeof expedientes !== 'undefined') { expedientes = dec; }
+        if(typeof renderExpLista === 'function') renderExpLista();
+        if(typeof initDash === 'function') initDash();
+      }
+    }
+  }catch(e){ log('⚠ Re-carga expedientes: '+e.message); }
+}
+
+function cryptoCerrarSesion(){
+  _cryptoKey = null;
+}
+
 const _lsCache={};
 const LS={
   get:(k,d={})=>{
-    // Sync: return cache if already loaded, else localStorage fallback
     if(_lsCache[k]!==undefined) return _lsCache[k];
     try{const v=localStorage.getItem(k);const parsed=v?JSON.parse(v):d;_lsCache[k]=parsed;return parsed;}catch{return d;}
   },
   set:(k,v)=>{
+    if(CRYPTO_KEYS.some(ck=>k.startsWith(ck)) && _cryptoKey){
+      cryptoCifrar(v, _cryptoKey).then(cifrado=>{
+        _lsCache[k]=v;
+        idbSet(k,cifrado).catch(()=>{});
+        try{localStorage.setItem(k,cifrado);}catch(e){
+          if(e.name==='QuotaExceededError') try{localStorage.removeItem(k);}catch{}
+        }
+      }).catch(()=>{
+        _lsCache[k]=v;
+        idbSet(k,v).catch(()=>{});
+        try{localStorage.setItem(k,JSON.stringify(v));}catch{}
+      });
+      return;
+    }
     _lsCache[k]=v;
-    // Async write to IndexedDB (primary, unlimited)
     idbSet(k,v).catch(()=>{});
-    // Sync write to localStorage (fallback, may fail if full)
     try{localStorage.setItem(k,JSON.stringify(v));}catch(e){
-      // localStorage full — silently continue, IDB is primary
       if(e.name==='QuotaExceededError'){
-        try{localStorage.removeItem(k);}catch{}// free space from LS, IDB still works
+        try{localStorage.removeItem(k);}catch{}
       }
     }
   },
@@ -6171,14 +6193,20 @@ const LS={
 };
 // On startup: load critical keys from IDB into cache
 async function idbWarmCache(){
-  const keys=['expedientes','cfg','cMeds','cCIE','cLab','cGab','actLog'];
+  const keys=['expedientes','cfg','cMeds','cCIE','cLab','cGab','actLog','auditoria'];
   for(const k of keys){
     try{
-      const v=await idbGet(k);
+      let v=await idbGet(k);
       if(v!==undefined&&v!==null){
+        // Si está cifrado y hay clave activa, descifrar antes de cachear
+        if(CRYPTO_KEYS.some(ck=>k.startsWith(ck)) && _cryptoKey && typeof v==='string' && v.startsWith('MEDBC_ENC:')){
+          v = await cryptoDescifrar(v, _cryptoKey) || v;
+        }
         _lsCache[k]=v;
-        // Also sync back to localStorage if fits
-        try{localStorage.setItem(k,JSON.stringify(v));}catch{}
+        // Solo sync a localStorage si NO es clave cifrable (evitar texto plano)
+        if(!CRYPTO_KEYS.some(ck=>k.startsWith(ck))){
+          try{localStorage.setItem(k,JSON.stringify(v));}catch{}
+        }
       }
     }catch{}
   }
@@ -6239,9 +6267,10 @@ function aplicarPermisosSidebar(){
 // ══ MODO RECEPCIÓN — oculta todo excepto agenda ══
 function aplicarModoRecepcion(){
   if(!sessionUser || sessionUser.rol !== 'recepcion') return;
-  // Ocultar sidebar completamente
+  // Ocultar sidebar completamente y limpiar estado colapsado
   const sb = document.getElementById('sb');
-  if(sb) sb.style.display='none';
+  if(sb){ sb.style.display='none'; sb.classList.remove('sb-collapsed','mob-open'); }
+  localStorage.removeItem('medbc_sb_collapsed');
   // Ocultar botón hamburger móvil
   const ham = document.getElementById('hamburger-btn');
   if(ham) ham.style.display='none';
@@ -6317,6 +6346,14 @@ function showPage(page){
     document.querySelectorAll('.cfg-tab-admin').forEach(t => {
       t.style.display = (rolCfg === 'admin') ? '' : 'none';
     });
+    // Apariencia: solo admin
+    document.querySelectorAll('.cfg-tab-nomedico').forEach(t => {
+      t.style.display = (rolCfg === 'admin') ? '' : 'none';
+    });
+    // Impresión: médico y admin (no recepción)
+    document.querySelectorAll('.cfg-tab-medico').forEach(t => {
+      t.style.display = (rolCfg === 'medico' || rolCfg === 'admin') ? '' : 'none';
+    });
   }
   if(sessionUser?.rol !== 'recepcion') bc([{l:'🏠',a:"nav('dashboard')"}]);
   // Botón 🏠 en el header de cada página (excepto dashboard) — oculto para recepción
@@ -6335,7 +6372,7 @@ function showPage(page){
       }
     }, 30);
   }
-  if(page==='config'){updateSysStats();setTimeout(backupActualizarInfo,50);}
+  if(page==='config'){updateSysStats();setTimeout(backupActualizarInfo,50);setTimeout(loadCfgIntoForm,30);stab('cfg','medico');const tabBar=document.querySelector('#page-config .tab-bar');if(tabBar)tabBar.scrollLeft=0;}
   if(page==='misdatos'){cargarMisDatos();}
   if(page==='agenda'){setTimeout(()=>{renderAgenda();renderCitasPendientes();},50);}
   // ══ LIMPIAR FORMULARIOS AL NAVEGAR ══
@@ -6640,7 +6677,7 @@ function saveHC(){
     ['rx-pac','ce-pac','es-pac'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=n;});
     ['rx-edad','ce-edad'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=e;});
   }
-  toast('✓ Historia Clínica guardada y sincronizada');log(`📋 HC: ${n}`);
+  toast('✓ Historia Clínica guardada y sincronizada');auditLog('📋 Historia Clínica guardada', n);log(`📋 HC: ${n}`);
 }
 function hcGuardarEnExpediente(){
   const nom=document.getElementById('hc-nom')?.value?.trim();
@@ -6658,7 +6695,7 @@ function hcGuardarEnExpediente(){
       tel:document.getElementById('hc-tel')?.value||'',
       email:document.getElementById('hc-email')?.value||'',
       nss:document.getElementById('hc-nss')?.value||'',
-      fechaAlta:new Date().toISOString().split('T')[0],
+      fechaAlta:fechaHoy(),
       consultas:[],recetas:[],estudios:[],notas:''};
     expedientes.push(p);
     toast('✅ Paciente nuevo registrado en Expediente: '+nom);
@@ -6788,7 +6825,7 @@ function dlHC(){
 // RECETA MÉDICA
 // ══════════════════════════════════════════════════════════
 function initReceta(){
-  document.getElementById('rx-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('rx-fecha').value=fechaHoy();
   loadFmtFromCfg();
   for(let i=0;i<3;i++)addRxRow();
   rxRestaurarTitulo();
@@ -6827,7 +6864,7 @@ function updateRxCount(){
 function saveRx(){
   const p=document.getElementById('rx-pac')?.value;
   if(!p){toast('Ingresa el nombre del paciente','err');return;}
-  toast('✓ Receta guardada');log(`💊 Receta: ${p}`);
+  toast('✓ Receta guardada');auditLog('💊 Receta guardada', p);log(`💊 Receta: ${p}`);
 }
 function clearRx(){
   document.getElementById('rx-rows').innerHTML='';rxRowN=0;
@@ -7273,7 +7310,7 @@ function renderPreview(){
   const rxEdad=document.getElementById('rx-edad')?.value||'';
   const rxSexo=(()=>{const s=document.getElementById('rx-sexo')?.value||'';const o=document.getElementById('rx-sexo-otro')?.value||'';return s==='Otro'?o||s:s;})();
   const dx=document.getElementById('rx-dx')?.value||'[Diagnóstico]';
-  const fecha=document.getElementById('rx-fecha')?.value||new Date().toISOString().split('T')[0];
+  const fecha=document.getElementById('rx-fecha')?.value||fechaHoy();
   const alergias=document.getElementById('rx-alergias')?.value||'';
   const ind=document.getElementById('rx-ind')?.value||'';
   const esAnti=document.getElementById('rx-es-antibiotico')?.checked||false;
@@ -7506,7 +7543,7 @@ function dlRx(){
   dlPDF(`Receta_${pac}.pdf`,`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
     <style>@page{size:${pageSize} ${orient};margin:${margin}}html,body{margin:0;padding:0;height:auto}.rx-page-break{display:block;page-break-before:always;break-before:page;height:0;margin:0;padding:0}@media print{.rx-page-break{display:block;page-break-before:always;break-before:page}}</style>
     </head><body>${fixedHtml}</body></html>`);
-  toast('✓ Receta descargada');log(`⬇ Receta: ${pac}`);
+  toast('✓ Receta descargada');auditLog('⬇ Receta descargada', pac);log(`⬇ Receta: ${pac}`);
 }
 function printRx(){
   renderPreview();
@@ -7523,6 +7560,15 @@ function printRx(){
   const fixedHtml = html.replace(/<div style="page-break-before:always[^"]*"><\/div>/g, '<div class="rx-page-break"></div>');
   const fullHtml = '<!DOCTYPE html><html><head><meta charset="UTF-8">' + pageStyle + '</head><body>' + fixedHtml + '</body></html>';
   imprimirDocumento(fullHtml);
+  // Ofrecer cobro al imprimir receta
+  setTimeout(()=>{
+    const nombrePac = document.getElementById('rx-pac')?.value?.trim() || '';
+    finModalCobroRapido('Consulta');
+    if(nombrePac){
+      const pacEl = document.getElementById('cobro-rapido-paciente');
+      if(pacEl) pacEl.value = nombrePac;
+    }
+  }, 500);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -7531,7 +7577,7 @@ function printRx(){
 function saveCert(){
   const nom=document.getElementById('ce-nom')?.value||document.getElementById('ce-ap')?.value;
   if(!nom){toast('Ingresa el nombre del paciente','err');return;}
-  toast('✓ Certificado guardado');log(`📄 Certificado: ${nom}`);
+  toast('✓ Certificado guardado');auditLog('📄 Certificado guardado', nom);log(`📄 Certificado: ${nom}`);
 }
 function clearCert(){
   ['ce-ap','ce-am','ce-nom','ce-edad','ce-talla','ce-peso','ce-ta',
@@ -7885,12 +7931,24 @@ function dlCert(){
   const pac=document.getElementById('ce-nom')?.value||document.getElementById('ce-ap')?.value||'Paciente';
   const html=buildCertHTML();
   dlPDF(`Certificado_${pac}.pdf`,html);
-  toast('✓ Certificado descargado');log(`⬇ Certificado: ${pac}`);
+  toast('✓ Certificado descargado');auditLog('⬇ Certificado descargado', pac);log(`⬇ Certificado: ${pac}`);
 }
 function printCert(){
   const html=buildCertHTML();
   imprimirDocumento(html);
-  setTimeout(()=>finModalCobroRapido('Certificado médico'), 500);
+  setTimeout(()=>{
+    // Prellenar nombre del paciente en el modal de cobro desde el certificado
+    const nombre = [
+      document.getElementById('ce-nom')?.value?.trim(),
+      document.getElementById('ce-ap')?.value?.trim(),
+      document.getElementById('ce-am')?.value?.trim()
+    ].filter(Boolean).join(' ');
+    finModalCobroRapido('Certificado médico');
+    if(nombre){
+      const pacEl = document.getElementById('cobro-rapido-paciente');
+      if(pacEl) pacEl.value = nombre;
+    }
+  }, 500);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -7976,7 +8034,7 @@ function dlEstudios(){
     </div>
     <div style="text-align:center;border-top:1px solid #333;padding-top:8px;font-size:11px">Recibido / Procesado</div>
     </div></body></html>`);
-  toast('✓ Solicitud descargada');log(`⬇ Estudios: ${pac}`);
+  toast('✓ Solicitud descargada');auditLog('⬇ Solicitud de estudios descargada', pac);log(`⬇ Estudios: ${pac}`);
 }
 
 function limpiarEstudios(){
@@ -8997,7 +9055,7 @@ function clearCustomGab(){cGab=[];LS.set('cGab',[]);renderCustomGab();}
 // EXPORT / IMPORT TOTAL
 // ══════════════════════════════════════════════════════════
 function exportAll(){
-  dlJSON(`MedBC_Pro_backup_${new Date().toISOString().split('T')[0]}.json`,
+  dlJSON(`MedBC_Pro_backup_${fechaHoy()}.json`,
     {cMeds,cCIE,cLab,cGab,cfg,expedientes,version:'MedBC Pro-v6',date:new Date().toISOString()});
   registrarRespaldo('Respaldo completo');
   toast('✅ Respaldo completo exportado');log('⬆ Backup v6 exportado');
@@ -9190,7 +9248,7 @@ function expNuevoPaciente(){
   const p={
     id,folio,nombre:nombre.trim(),
     curp:'',fnac:'',sexo:'',sangre:'',tel:'',email:'',nss:'',
-    fechaAlta:new Date().toISOString().split('T')[0],
+    fechaAlta:fechaHoy(),
     consultas:[],recetas:[],estudios:[],notas:''
   };
   expedientes.push(p);
@@ -9250,7 +9308,7 @@ function expAbrirDetalle(id){
     <span style="color:var(--so)">${ul.dx||''} ${ul.plan?'· Plan: '+ul.plan.substring(0,80)+'...':''}</span>
   `:'Sin consultas registradas.';
   // fecha nueva consulta y nota
-  const hoy=new Date().toISOString().split('T')[0];
+  const hoy=fechaHoy();
   document.getElementById('nc-fecha').value=hoy;
   document.getElementById('nev-fecha').value=hoy;
   document.getElementById('arch-fecha').value=hoy;
@@ -9440,7 +9498,7 @@ function hcDocCargar(files){
         data: ev.target.result,
         cat: document.getElementById('hc-doc-cat').value,
         desc: document.getElementById('hc-doc-desc').value || file.name,
-        fecha: document.getElementById('hc-doc-fecha').value || new Date().toISOString().split('T')[0]
+        fecha: document.getElementById('hc-doc-fecha').value || fechaHoy()
       };
       hcDocPendientes.push(doc);
       // Miniatura preview
@@ -9465,7 +9523,7 @@ function hcDocGuardar(){
   // Leer cat/desc/fecha actuales
   const cat  = document.getElementById('hc-doc-cat').value;
   const desc = document.getElementById('hc-doc-desc').value;
-  const fecha= document.getElementById('hc-doc-fecha').value || new Date().toISOString().split('T')[0];
+  const fecha= document.getElementById('hc-doc-fecha').value || fechaHoy();
   hcDocPendientes.forEach(d=>{ d.cat=cat; if(desc) d.desc=desc; d.fecha=fecha; });
   // Guardar en localStorage bajo clave de HC
   const key = 'medbc_pro_hc_docs';
@@ -9576,7 +9634,7 @@ function expGuardarNota(){
   const ahora = new Date();
   const nota = {
     id: Date.now(),
-    fecha: document.getElementById('nev-fecha').value || ahora.toISOString().split('T')[0],
+    fecha: document.getElementById('nev-fecha').value || fechaHoy(ahora),
     creadoEn: ahora.toLocaleString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
     tipo: document.getElementById('nev-tipo').value,
     medico: document.getElementById('nev-medico').value || (cfg.nombre||'Médico'),
@@ -9588,7 +9646,7 @@ function expGuardarNota(){
   clearForm(['nev-s','nev-o','nev-a','nev-p']);
   renderExpNotas(p);
   toast('✅ Nota médica guardada');
-  log('📝 Nota guardada: '+p.nombre);
+  auditLog('📝 Nota médica guardada', p.nombre);log('📝 Nota guardada: '+p.nombre);
 }
 
 function renderExpNotas(p){
@@ -9680,7 +9738,7 @@ function archHandleFiles(files){
       const data = { id:Date.now()+Math.random(), name:file.name, type:file.type, data:e.target.result,
         cat: document.getElementById('arch-cat').value,
         desc: document.getElementById('arch-desc').value || file.name,
-        fecha: document.getElementById('arch-fecha').value || new Date().toISOString().split('T')[0]
+        fecha: document.getElementById('arch-fecha').value || fechaHoy()
       };
       archPendientes.push(data);
       // Miniatura preview
@@ -9705,7 +9763,7 @@ function expGuardarArchivos(){
   // Releer cat/desc/fecha actuales
   const cat  = document.getElementById('arch-cat').value;
   const desc = document.getElementById('arch-desc').value;
-  const fecha= document.getElementById('arch-fecha').value || new Date().toISOString().split('T')[0];
+  const fecha= document.getElementById('arch-fecha').value || fechaHoy();
   archPendientes.forEach(a=>{ a.cat=cat; a.desc=desc||a.name; a.fecha=fecha; });
   p.archivos.unshift(...archPendientes);
   archPendientes = [];
@@ -9861,14 +9919,14 @@ function expNuevaRecetaConMeds(){
 
     updateRxCount();
     toast('✅ Receta pre-cargada con '+lineas.length+' medicamento'+(lineas.length>1?'s':'')+' de '+p.nombre);
-    log('💊 Receta desde expediente: '+p.nombre);
+    auditLog('💊 Receta generada desde expediente', p.nombre);log('💊 Receta desde expediente: '+p.nombre);
   }, 120);
 }
 
 function expEliminarConsulta(pid,idx){
   if(!confirm('¿Eliminar esta consulta?'))return;
   const p=expedientes.find(x=>x.id===pid);if(!p)return;
-  p.consultas.splice(idx,1);expGuardarTodos();expAbrirDetalle(pid);toast('✓ Consulta eliminada');
+  auditLog('🗑️ Consulta eliminada', p?.nombre||'');p.consultas.splice(idx,1);expGuardarTodos();expAbrirDetalle(pid);toast('✓ Consulta eliminada');
 }
 function expEliminarReceta(pid,idx){
   if(!confirm('¿Eliminar esta receta?'))return;
@@ -9963,7 +10021,7 @@ function expEliminarPaciente(id){
   const p=expedientes.find(x=>x.id===id);
   if(!p||!confirm('¿Eliminar el expediente de '+p.nombre+'?\n\nEsto eliminará TODAS sus consultas, recetas y estudios.'))return;
   expedientes=expedientes.filter(x=>x.id!==id);
-  expGuardarTodos();renderExpLista();toast('✓ Expediente eliminado');initDash();
+  auditLog('🗑️ Expediente eliminado', '');expGuardarTodos();renderExpLista();toast('✓ Expediente eliminado');initDash();
 }
 
 
@@ -10056,12 +10114,12 @@ function expExportarPacientePDF(id){
 
   imprimirDocumento(html);
   toast(`📄 Generando PDF de ${p.nombre}`);
-  log(`📄 PDF expediente: ${p.nombre}`);
+  auditLog('📄 PDF expediente generado', p.nombre);log(`📄 PDF expediente: ${p.nombre}`);
 }
 
 function expExportarTodo(){
   const data=JSON.stringify({version:'v6',fecha:new Date().toISOString(),expedientes},null,2);
-  dlBlob(data,'MedBC_Pro_Expedientes_'+new Date().toISOString().split('T')[0]+'.json','application/json');
+  dlBlob(data,'MedBC_Pro_Expedientes_'+fechaHoy()+'.json','application/json');
   registrarRespaldo('Solo expedientes');
   toast('✅ Expedientes exportados');
 }
@@ -10087,6 +10145,62 @@ function renderBackupHistory(){
       <span style="color:var(--tx)">${r.tipo}</span>
       <span style="color:var(--so)">${new Date(r.fecha).toLocaleString('es-MX')}</span>
     </div>`).join('');
+
+// ══════════════════════════════════════════════════════════
+// RESPALDO AUTOMÁTICO AL CERRAR SESIÓN
+// Supabase (tabla medbc_respaldos) + archivo .json local
+// ══════════════════════════════════════════════════════════
+async function autoRespaldoAlLogout(){
+  if(!expedientes||!expedientes.length) return;
+  const fecha = new Date().toISOString();
+  const usuario = sessionUser?.nombre || sessionUser?.user || 'desconocido';
+  const gid = _gid || window._mtGid || 'sin-grupo';
+  const datos = { version:'v6', fecha, usuario, gid, expedientes };
+  let okSupa = false, okLocal = false;
+
+  // ── 1. Supabase ──────────────────────────────────────────
+  if(cfg.sbEnabled && cfg.sbUrl && cfg.sbKey){
+    try{
+      const sb = sbCliente();
+      if(sb){
+        const payload = {
+          id: gid + '_auto_' + Date.now(),
+          gid,
+          usuario,
+          fecha,
+          datos: JSON.stringify(expedientes),
+          tipo: 'auto-logout'
+        };
+        const { error } = await sb.from('medbc_respaldos').insert(payload);
+        if(!error){
+          okSupa = true;
+          log('☁️ Respaldo automático → Supabase OK');
+        } else {
+          log('⚠ Respaldo Supabase: ' + error.message);
+        }
+      }
+    }catch(e){ log('⚠ Respaldo Supabase: ' + e.message); }
+  }
+
+  // ── 2. Archivo local (.json) ─────────────────────────────
+  try{
+    const json = JSON.stringify(datos, null, 2);
+    const blob = new Blob(['﻿' + json], { type:'application/json;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `MedBC_Respaldo_Auto_${fechaHoy()}_${usuario.replace(/\s+/g,'_')}.json`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
+    okLocal = true;
+    log('💾 Respaldo automático → archivo local OK');
+  }catch(e){ log('⚠ Respaldo local: ' + e.message); }
+
+  // ── 3. Registrar en historial ────────────────────────────
+  const resumen = `Auto-logout — Supabase:${okSupa?'✅':'❌'} Local:${okLocal?'✅':'❌'}`;
+  registrarRespaldo(resumen);
+}
 }
 
 function limpiarHistorialRespaldos(){
@@ -10105,7 +10219,7 @@ function abrirMega(){window.open('https://mega.nz','_blank');}
 
 function exportSoloExpedientes(){
   const data=JSON.stringify({version:'v6',fecha:new Date().toISOString(),expedientes},null,2);
-  dlBlob(data,'MedBC_Pro_Expedientes_'+new Date().toISOString().split('T')[0]+'.json','application/json');
+  dlBlob(data,'MedBC_Pro_Expedientes_'+fechaHoy()+'.json','application/json');
   registrarRespaldo('Solo expedientes');
   toast('✅ Expedientes exportados');
 }
@@ -10847,7 +10961,7 @@ function initHCEsp(){
     hcLoadCustom();
     initAlergias();
     hcDocRenderGaleria();
-    const hoy=new Date().toISOString().split('T')[0];
+    const hoy=fechaHoy();
     const df=document.getElementById('hc-doc-fecha');
     if(df&&!df.value) df.value=hoy;
   }, 150);
@@ -11063,7 +11177,7 @@ function exportBackupBeforeUpdate(){
     usuarios: LS.get('medbc_pro_usuarios',[])
   };
   dlBlob(JSON.stringify(data,null,2),
-    'MedBC_Pro_Respaldo_Pre-Update_'+new Date().toISOString().split('T')[0]+'.json',
+    'MedBC_Pro_Respaldo_Pre-Update_'+fechaHoy()+'.json',
     'application/json');
   toast('💾 Respaldo guardado antes de actualizar');
 }
@@ -11126,7 +11240,7 @@ function renderUpdHistorial(){
 function copyVersionJsonExample(){
   const txt=`{
   "version": "10.1.0",
-  "fecha": "${new Date().toISOString().split('T')[0]}",
+  "fecha": "${fechaHoy()}",
   "url": "https://raw.githubusercontent.com/TU_USUARIO/medbc-pro/main/MedBC Pro.html",
   "notas": [
     "✅ Nuevos medicamentos",
@@ -11150,9 +11264,17 @@ function authTab(tab){
   if(recForm) recForm.classList.toggle('active',tab==='recuperacion');
   if(tab==='login'){ setTimeout(()=>document.getElementById('login-user').focus(),100); loginMostrarSesionGuardada(); }
   if(tab==='registro'){
+    // Limpiar todos los campos del formulario de registro
+    ['reg-nombre','reg-esp','reg-cedula','reg-clinica','reg-tel','reg-user','reg-pass','reg-pass2','reg-email','reg-sa','reg-invite'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    const hcEsp=document.getElementById('reg-hcesp'); if(hcEsp) hcEsp.selectedIndex=0;
+    const sq=document.getElementById('reg-sq'); if(sq) sq.value='';
+    // El tipo por defecto es admin → ocultar sección de código
+    const tipoEl = document.getElementById('reg-tipo');
+    if(tipoEl) tipoEl.value = 'admin';
+    regTipoCambio();
     setTimeout(()=>document.getElementById('reg-nombre').focus(),100);
-    const invSec=document.getElementById('reg-invite-section');
-    if(invSec){const usuarios=getUsuarios();const hayAdmin=usuarios.some(u=>u.rol==='admin');invSec.style.display=hayAdmin?'':'none';}
   }
   if(tab==='recuperacion'){ recReset(); setTimeout(()=>document.getElementById('rec-user')?.focus(),150); }
 }
@@ -11334,8 +11456,8 @@ function loginContinuar(){
   if(sbElAuto) sbElAuto.scrollTop = 0;
   updateSessionUI();
   aplicarPermisosSidebar();
+  if(found.rol==='recepcion') aplicarModoRecepcion();
   showPage(found.rol==='recepcion' ? 'agenda' : 'dashboard');
-  if(found.rol==='recepcion') setTimeout(()=>aplicarModoRecepcion(),150);
   if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false),150);
   toast('✅ Bienvenido, '+found.nombre);
   log('🔐 Sesión continuada: '+found.nombre);
@@ -11525,6 +11647,17 @@ function regVerificar(){
 }
 
 
+function regTipoCambio(){
+  const tipo = document.getElementById('reg-tipo')?.value;
+  const invSec = document.getElementById('reg-invite-section');
+  if(!invSec) return;
+  if(tipo === 'admin'){
+    invSec.style.display = 'none'; // admin nunca necesita código
+  } else {
+    invSec.style.display = ''; // médico sí necesita código
+  }
+}
+
 async function regFinalizar(){
   const nombre  = document.getElementById('reg-nombre').value.trim();
   const user    = document.getElementById('reg-user').value.trim();
@@ -11542,8 +11675,20 @@ async function regFinalizar(){
   if(!email && !sq){ toast('Configura al menos un método de recuperación (correo o pregunta)','err'); return; }
   if(sq && !sa){ toast('Escribe la respuesta de la pregunta de seguridad','err'); return; }
 
+  // Determinar si es admin por el selector del form o por grupo nuevo/vacío
+  const tipoSeleccionado = document.getElementById('reg-tipo')?.value || 'admin';
+  const grupoNuevo = sessionStorage.getItem('__mt_nuevo_grupo__') === '1';
   const usuarios = getUsuarios();
-  const esAdmin  = usuarios.length === 0;
+  const esAdmin = tipoSeleccionado === 'admin' || grupoNuevo || usuarios.length === 0 ||
+                  (usuarios.length === 1 && usuarios[0]?.user === 'admin' && !localStorage.getItem('medbc_pro_registro_done__'+(_gid||'')));
+
+  // Si es admin → crear nueva clínica independiente aunque ya exista otro admin
+  if(esAdmin && !grupoNuevo){
+    // Activar nuevo grupo para que los datos queden aislados
+    const gid = 'g' + Date.now() + Math.random().toString(36).slice(2,9);
+    mtActivarGrupo(gid);
+    sessionStorage.setItem('__mt_nuevo_grupo__', '1');
+  }
 
   if(!esAdmin){
     if(!invite){ toast('Ingresa el código de invitación que te dio el administrador','err'); return; }
@@ -11580,6 +11725,7 @@ async function regFinalizar(){
     saveUsuarios(usuarios);
   }
   localStorage.setItem(REG_KEY, '1');
+  sessionStorage.removeItem('__mt_nuevo_grupo__'); // limpiar flag de grupo nuevo
 
   authTab('login');
   document.getElementById('login-user').value = user;
@@ -11748,7 +11894,11 @@ function getUsuarios(){
   }
   return u;
 }
-function saveUsuarios(arr){LS.set(AUTH_KEY,arr);}
+function saveUsuarios(arr){
+  LS.set(AUTH_KEY,arr);
+  // Forzar copia en localStorage nativo para que mtBuscarGrupoDeUsuario lo encuentre
+  try{ if(_gid) localStorage.setItem('medbc_pro_usuarios__'+_gid, JSON.stringify(arr)); }catch{}
+}
 
 let sessionUser=null; // {user, nombre, rol}
 
@@ -11804,8 +11954,8 @@ function doLogin(){
       if(sbEl) sbEl.scrollTop = 0;
       updateSessionUI();
       aplicarPermisosSidebar();
+      if(found.rol==='recepcion') aplicarModoRecepcion();
       showPage(found.rol==='recepcion' ? 'agenda' : 'dashboard');
-      if(found.rol==='recepcion') setTimeout(()=>aplicarModoRecepcion(),150);
       if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false),150);
       toast('✅ Bienvenido, '+found.nombre);
       log('🔐 Sesión iniciada: '+found.nombre+' ('+found.rol+')');
@@ -12881,7 +13031,7 @@ function renderTendencias(){
 function guardarGlucosa(){
   const p = expedientes.find(x=>x.id===expActualId);
   if(!p){toast('Abre un expediente primero','err');return;}
-  const fecha = document.getElementById('gluc-fecha').value || new Date().toISOString().split('T')[0];
+  const fecha = document.getElementById('gluc-fecha').value || fechaHoy();
   const valor = document.getElementById('gluc-valor').value;
   const momento = document.getElementById('gluc-momento').value;
   const hba1c = document.getElementById('gluc-hba1c').value;
@@ -13033,18 +13183,39 @@ function esDiaBloqueado(fechaStr){
 
 // ── Modal bloqueos ─────────────────────────────────────────
 function abrirModalBloqueo(){
-  document.getElementById('bloq-dia-inicio').value = new Date().toISOString().split('T')[0];
+  document.getElementById('bloq-dia-inicio').value = fechaHoy();
   document.getElementById('bloq-dia-fin').value = '';
+  const rol = sessionUser?.rol || 'recepcion';
+  const solWrap = document.getElementById('bloq-solicitante-wrap');
+  const solSel  = document.getElementById('bloq-solicitante');
+  if(rol === 'recepcion' || rol === 'admin'){
+    // Mostrar selector de quién solicitó el bloqueo
+    solWrap.style.display = 'block';
+    const usuarios = (getUsuarios()||[]).filter(u=>u.rol==='admin'||u.rol==='medico');
+    const propioNombre = sessionUser?.nombre || sessionUser?.usuario || '';
+    const propioLabel = rol === 'admin' ? '👑 Admin' : '🏥 Recepción';
+    solSel.innerHTML = `<option value="${propioNombre}" selected>${propioLabel}: ${propioNombre} (yo)</option>` +
+      usuarios.filter(u=>(u.nombre||u.usuario) !== propioNombre)
+        .map(u=>`<option value="${u.nombre||u.usuario}">${u.rol==='admin'?'👑 Admin':'🩺 Médico'}: ${u.nombre||u.usuario}</option>`).join('');
+  } else {
+    // Médico: ocultar selector, se guarda su propio nombre automáticamente
+    solWrap.style.display = 'none';
+  }
   renderBloqueoLista();
   document.getElementById('bloqueo-modal').style.display='flex';
 }
 function cerrarModalBloqueo(){document.getElementById('bloqueo-modal').style.display='none';}
 
 function bloqueoTab(tab){
-  document.getElementById('bpanel-hora').style.display = tab==='hora'?'block':'none';
-  document.getElementById('bpanel-dia').style.display  = tab==='dia' ?'block':'none';
-  document.getElementById('btab-hora').className = 'pill '+(tab==='hora'?'pb':'pn');
-  document.getElementById('btab-dia').className  = 'pill '+(tab==='dia' ?'pb':'pn');
+  document.getElementById('bpanel-hora').style.display  = tab==='hora' ?'block':'none';
+  document.getElementById('bpanel-dia').style.display   = tab==='dia'  ?'block':'none';
+  document.getElementById('bpanel-unica').style.display = tab==='unica'?'block':'none';
+  document.getElementById('btab-hora').className  = 'pill '+(tab==='hora' ?'pb':'pn');
+  document.getElementById('btab-dia').className   = 'pill '+(tab==='dia'  ?'pb':'pn');
+  document.getElementById('btab-unica').className = 'pill '+(tab==='unica'?'pb':'pn');
+  if(tab==='unica' && !document.getElementById('bloq-unica-fecha').value){
+    document.getElementById('bloq-unica-fecha').value = fechaHoy();
+  }
 }
 
 function guardarBloqueoHora(){
@@ -13053,12 +13224,20 @@ function guardarBloqueoHora(){
   const dias = [...document.querySelectorAll('#bloq-dias-check input:checked')].map(i=>parseInt(i.value));
   if(!dias.length){toast('Selecciona al menos un día','err');return;}
   const motivo = document.getElementById('bloq-hora-motivo').value.trim() || 'Bloqueado';
-  // Evitar duplicado exacto
+  const rol = sessionUser?.rol || 'recepcion';
+  let solicitante = '', creadoPor = sessionUser?.nombre||sessionUser?.usuario||'';
+  if(rol === 'recepcion'){
+    solicitante = document.getElementById('bloq-solicitante').value;
+    if(!solicitante){toast('Indica quién solicitó el bloqueo','err');return;}
+  } else {
+    // Médico/Admin solo bloquea para sí mismo
+    solicitante = creadoPor;
+  }
   const existe = bloqueos.find(b=>b.tipo==='hora'&&b.hora===hora&&JSON.stringify(b.dias.sort())===JSON.stringify(dias.sort()));
   if(existe){toast('Ya existe ese bloqueo','err');return;}
-  bloqueos.push({id:'BLQ-'+Date.now(), tipo:'hora', hora, dias, motivo});
+  bloqueos.push({id:'BLQ-'+Date.now(), tipo:'hora', hora, dias, motivo, solicitante, creadoPor, creadoEn:new Date().toLocaleString('es-MX')});
   saveBloqueos();renderBloqueoLista();renderAgenda();
-  toast('🚫 Hora '+hora+' bloqueada');
+  toast('🚫 Hora '+hora+' bloqueada — Solicitado por: '+solicitante);
 }
 
 function guardarBloqueoDia(){
@@ -13066,9 +13245,38 @@ function guardarBloqueoDia(){
   if(!inicio){toast('Selecciona fecha','err');return;}
   const fin = document.getElementById('bloq-dia-fin').value || inicio;
   const motivo = document.getElementById('bloq-dia-motivo').value.trim() || 'Día bloqueado';
-  bloqueos.push({id:'BLQ-'+Date.now(), tipo:'dia', inicio, fin, motivo});
+  const rol = sessionUser?.rol || 'recepcion';
+  let solicitante = '', creadoPor = sessionUser?.nombre||sessionUser?.usuario||'';
+  if(rol === 'recepcion' || rol === 'admin'){
+    solicitante = document.getElementById('bloq-solicitante').value;
+    if(!solicitante){toast('Indica quién solicitó el bloqueo','err');return;}
+  } else {
+    solicitante = creadoPor;
+  }
+  bloqueos.push({id:'BLQ-'+Date.now(), tipo:'dia', inicio, fin, motivo, solicitante, creadoPor, creadoEn:new Date().toLocaleString('es-MX')});
   saveBloqueos();renderBloqueoLista();renderAgenda();
-  toast('🚫 Día(s) bloqueado(s)');
+  toast('🚫 Día(s) bloqueado(s) — Solicitado por: '+solicitante);
+}
+
+function guardarBloqueoUnica(){
+  const fecha = document.getElementById('bloq-unica-fecha').value;
+  const hora  = document.getElementById('bloq-unica-hora').value;
+  if(!fecha){toast('Selecciona una fecha','err');return;}
+  if(!hora) {toast('Selecciona una hora','err');return;}
+  const motivo = document.getElementById('bloq-unica-motivo').value.trim() || 'Bloqueado';
+  const rol = sessionUser?.rol || 'recepcion';
+  let solicitante = '', creadoPor = sessionUser?.nombre||sessionUser?.usuario||'';
+  if(rol === 'recepcion' || rol === 'admin'){
+    solicitante = document.getElementById('bloq-solicitante').value;
+    if(!solicitante){toast('Indica quién solicitó el bloqueo','err');return;}
+  } else {
+    solicitante = creadoPor;
+  }
+  const existe = bloqueos.find(b=>b.tipo==='unica'&&b.fecha===fecha&&b.hora===hora);
+  if(existe){toast('Ya existe ese bloqueo','err');return;}
+  bloqueos.push({id:'BLQ-'+Date.now(), tipo:'unica', fecha, hora, motivo, solicitante, creadoPor, creadoEn:new Date().toLocaleString('es-MX')});
+  saveBloqueos();renderBloqueoLista();renderAgenda();
+  toast('🚫 Hora '+hora+' del '+fecha+' bloqueada — Solicitado por: '+solicitante);
 }
 
 function eliminarBloqueo(id){
@@ -13085,13 +13293,19 @@ function renderBloqueoLista(){
   el.innerHTML = bloqueos.map(b=>{
     const desc = b.tipo==='hora'
       ? `🕐 ${b.hora} — ${b.dias.map(d=>dias[d]).join(', ')}`
+      : b.tipo==='unica'
+      ? `📌 ${b.fecha} ${b.hora}`
       : `📅 ${b.inicio}${b.fin!==b.inicio?' → '+b.fin:''}`;
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--bd)">
+    const solInfo = b.solicitante
+      ? `<div style="font-size:10px;color:var(--ac);margin-top:2px">👤 Solicitado por: <strong>${b.solicitante}</strong>${b.creadoPor&&b.creadoPor!==b.solicitante?' · Registrado por: '+b.creadoPor:''}</div>`
+      : (b.creadoPor ? `<div style="font-size:10px;color:var(--so);margin-top:2px">👤 ${b.creadoPor}</div>` : '');
+    return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--bd);gap:8px">
       <div>
         <span style="font-weight:700;color:var(--rd)">${desc}</span>
         <span style="color:var(--so);margin-left:6px;font-size:11px">${b.motivo}</span>
+        ${solInfo}
       </div>
-      <button class="pill pr2" style="font-size:10px" onclick="eliminarBloqueo('${b.id}')">🗑️</button>
+      <button class="pill pr2" style="font-size:10px;flex-shrink:0" onclick="eliminarBloqueo('${b.id}')">🗑️</button>
     </div>`;
   }).join('');
 }
@@ -13126,8 +13340,8 @@ function renderAgenda(){
     `${lunes.getDate()} ${meses[lunes.getMonth()]} — ${dom.getDate()} ${meses[dom.getMonth()]} ${dom.getFullYear()}`;
 
   // Stats
-  const semStr = lunes.toISOString().split('T')[0];
-  const domStr = dom.toISOString().split('T')[0];
+  const semStr = fechaHoy(lunes);
+  const domStr = fechaHoy(dom);
   const citasSem = citas.filter(c=>c.fecha>=semStr&&c.fecha<=domStr);
   const prog = citasSem.filter(c=>c.estado==='programada'||c.estado==='confirmada').length;
   const comp = citasSem.filter(c=>c.estado==='completada').length;
@@ -13156,7 +13370,7 @@ function renderAgenda(){
     const isHoy=fecha.getTime()===hoy.getTime();
     const head=document.createElement('div');
     head.className='agenda-col-head'+(isHoy?' today':'');
-    const fechaStr=fecha.toISOString().split('T')[0];
+    const fechaStr=fechaHoy(fecha);
     const bloqDia = esDiaBloqueado(fechaStr);
     if(bloqDia){
       head.style.background='rgba(248,81,73,.12)';
@@ -13247,7 +13461,7 @@ function abrirModalCita(fecha='',hora=''){
   document.getElementById('cita-edit-id').value='';
   document.getElementById('cita-modal-titulo').textContent='➕ Nueva Cita';
   document.getElementById('cita-pac').value='';
-  document.getElementById('cita-fecha').value=fecha||new Date().toISOString().split('T')[0];
+  document.getElementById('cita-fecha').value=fecha||fechaHoy();
   document.getElementById('cita-hora').value=hora||'09:00';
   document.getElementById('cita-dur').value='30';
   document.getElementById('cita-tipo').value='Seguimiento';
@@ -13359,7 +13573,7 @@ function renderCitaRow(c){
 function renderCitasPendientes(){
   const el=document.getElementById('agenda-pend-lista'); if(!el) return;
   const filtro=document.getElementById('agenda-pend-filtro')?.value||'vencidas';
-  const hoy=new Date().toISOString().slice(0,10);
+  const hoy=fechaHoy();
   let arr=citas.filter(c=>c.estado==='programada'||c.estado==='confirmada');
   if(filtro==='vencidas') arr=arr.filter(c=>c.fecha<hoy);
   else if(filtro==='pendientes') arr=arr.filter(c=>c.fecha>=hoy);
@@ -13626,7 +13840,7 @@ function expGuardarConsulta(){
 }
 function expLimpiarConsulta(){
   ['nc-motivo','nc-ta','nc-fc','nc-fr','nc-peso','nc-talla','nc-imc','nc-temp','nc-spo2','nc-glucosa','nc-hallazgos','nc-plan','nc-meds','nc-proxima','nc-dx'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('nc-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('nc-fecha').value=fechaHoy();
 }
 
 // ══════════════════════════════════════════════════════════
@@ -13717,7 +13931,7 @@ function expGuardarLab(){
   if(!p){toast('Selecciona un paciente','err');return;}
   const param=document.getElementById('lab-param')?.value;
   const valor=parseFloat(document.getElementById('lab-valor')?.value||'');
-  const fecha=document.getElementById('lab-fecha')?.value||new Date().toISOString().split('T')[0];
+  const fecha=document.getElementById('lab-fecha')?.value||fechaHoy();
   const nota=document.getElementById('lab-nota')?.value||'';
   if(!param||isNaN(valor)){toast('Ingresa parámetro y valor','err');return;}
   if(!p.labs) p.labs=[];
@@ -13897,7 +14111,7 @@ function cqSetMode(modo){
 
 function cqInit(){
   // Fecha actual
-  const hoy=new Date().toISOString().split('T')[0];
+  const hoy=fechaHoy();
   const fd=document.getElementById('cq-fecha');if(fd&&!fd.value)fd.value=hoy;
   // Si estamos en modo libre, no necesitamos paciente
   if(cqModoActual === 'libre') return;
@@ -14055,7 +14269,7 @@ function cqGuardar(){
       id:'libre-'+Date.now(),
       ts:new Date().toISOString(),
       paciente:nombre, edad, sexo,
-      fecha:document.getElementById('cq-fecha')?.value||new Date().toISOString().split('T')[0],
+      fecha:document.getElementById('cq-fecha')?.value||fechaHoy(),
       tipo:document.getElementById('cq-tipo')?.value||'Consulta',
       motivo,
       subjetivo:document.getElementById('cq-subjetivo')?.value||'',
@@ -14095,7 +14309,7 @@ function cqGuardar(){
     Array.from(fileInput.files).forEach(f=>archivos.push({nombre:f.name,tipo:f.type,fecha:new Date().toISOString()}));
   }
   const c={
-    fecha:document.getElementById('cq-fecha')?.value||new Date().toISOString().split('T')[0],
+    fecha:document.getElementById('cq-fecha')?.value||fechaHoy(),
     tipo:document.getElementById('cq-tipo')?.value||'Seguimiento',
     motivo,
     subjetivo:document.getElementById('cq-subjetivo')?.value||'',
@@ -14167,7 +14381,7 @@ function cqLimpiar(){
   const fp=document.getElementById('cq-archivo');if(fp)fp.value='';
   const prev=document.getElementById('cq-archivos-preview');if(prev)prev.innerHTML='';
   ['cq-al-ta','cq-al-fc','cq-al-temp','cq-al-spo2','cq-al-gluc'].forEach(id=>cqAlerta(id,null));
-  const fd=document.getElementById('cq-fecha');if(fd)fd.value=new Date().toISOString().split('T')[0];
+  const fd=document.getElementById('cq-fecha');if(fd)fd.value=fechaHoy();
 }
 
 
@@ -14234,7 +14448,7 @@ function cqDescargarOrdenEstudios(){
   const estudios=cqGetEstudiosSeleccionados();
   if(!estudios.length){toast('⚠ Marca al menos un estudio','r');return;}
 
-  const fecha=document.getElementById('cq-fecha')?.value||new Date().toISOString().split('T')[0];
+  const fecha=document.getElementById('cq-fecha')?.value||fechaHoy();
   const fechaFmt=fecha.split('-').reverse().join('/');
   const dx=(document.getElementById('cq-dx')?.value||document.getElementById('cq-dx-clin')?.value||'').trim();
   const color=getCfgColor()||'#2EA8E0';
@@ -14453,7 +14667,7 @@ function expExportarConsulta(pid, idx){
   </div>
   </body></html>`;
   imprimirDocumento(html);
-  log('📄 PDF consulta exportado: '+p.nombre+' '+c.fecha);
+  auditLog('📄 PDF consulta exportada', p.nombre+' '+c.fecha);log('📄 PDF consulta exportado: '+p.nombre+' '+c.fecha);
 }
 
 
@@ -14806,8 +15020,8 @@ function renderDashAnalytics(){
   // Citas esta semana
   const lun = (()=>{const d=new Date();const day=d.getDay();const diff=day===0?-6:1-day;d.setDate(d.getDate()+diff);d.setHours(0,0,0,0);return d;})();
   const dom = new Date(lun);dom.setDate(dom.getDate()+6);
-  const lunStr=lun.toISOString().split('T')[0];
-  const domStr=dom.toISOString().split('T')[0];
+  const lunStr=fechaHoy(lun);
+  const domStr=fechaHoy(dom);
   const citasSem=citas.filter(c=>c.fecha>=lunStr&&c.fecha<=domStr);
   const dcSem=document.getElementById('dash-citas-semana');
   if(dcSem){
@@ -15101,7 +15315,7 @@ function backupExportarExpedientes() {
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const fecha = new Date().toISOString().split('T')[0];
+  const fecha = fechaHoy();
   a.href = url;
   a.download = `medbc_pro_expedientes_${fecha}.json`;
   a.click();
@@ -15216,6 +15430,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   idbWarmCache().then(()=>{
     // Re-read expedientes from cache after IDB load
     expedientes=LS.get('expedientes',[]);
+    // Sincronizar auditoria desde IDB (fix Tauri/WebView2)
+    idbGet('auditoria').then(v=>{ if(Array.isArray(v)){ auditoria=v; _lsCache['auditoria']=v; } }).catch(()=>{});
     renderAll();renderExpLista();initDash();
   });
   loadCfgIntoForm();
@@ -15236,7 +15452,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   const d=document.getElementById('ce-dia');if(d)d.value=hoy.getDate();
   const m=document.getElementById('ce-mes');if(m)m.value=hoy.getMonth()+1;
   const a=document.getElementById('ce-anio');if(a)a.value=hoy.getFullYear();
-  document.getElementById('ce-desde').value=new Date().toISOString().split('T')[0];
+  document.getElementById('ce-desde').value=fechaHoy();
 
   bc([{l:'🏠 Dashboard',a:''}]);
   log('🏥 MedBC Pro v13 iniciado');
@@ -15380,7 +15596,7 @@ function abrirNotaEvolucionRapida(){
     sel.appendChild(opt);
   });
   // Fecha hoy
-  document.getElementById('nrp-fecha').value = new Date().toISOString().split('T')[0];
+  document.getElementById('nrp-fecha').value = fechaHoy();
   // Limpiar campos
   ['nrp-s','nrp-o','nrp-a','nrp-p','nrp-nombre-pac'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
@@ -15394,7 +15610,7 @@ function cerrarNotaRapida(){
 }
 
 function _buildNotaHTML(){
-  const fecha    = document.getElementById('nrp-fecha')?.value || new Date().toISOString().split('T')[0];
+  const fecha    = document.getElementById('nrp-fecha')?.value || fechaHoy();
   const tipo     = document.getElementById('nrp-tipo')?.value || 'Evolución';
   const nombreP  = document.getElementById('nrp-nombre-pac')?.value?.trim() || '';
   const medico   = cfg.nombre || '';
@@ -15485,7 +15701,7 @@ function guardarNotaRapida(){
 
   const nota = {
     id: Date.now(),
-    fecha: fecha || new Date().toISOString().split('T')[0],
+    fecha: fecha || fechaHoy(),
     tipo, medico: cfg.nombre || '',
     s, o, a, p,
     creadaEn: new Date().toISOString()
@@ -15494,7 +15710,7 @@ function guardarNotaRapida(){
   pac.notas.unshift(nota);
   expGuardarTodos();
   toast(`✅ Nota guardada en expediente de ${pac.nombre}`);
-  log(`📝 Nota médica: ${pac.nombre} (${tipo})`);
+  auditLog('📝 Nota médica guardada', `${pac.nombre} (${tipo})`);log(`📝 Nota médica: ${pac.nombre} (${tipo})`);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -15574,7 +15790,7 @@ function ciBuildHTML(){
   const pacCurp  = (document.getElementById('ci-pac-curp')?.value||'').trim() || '______________________________';
   const repNombre= (document.getElementById('ci-rep-nombre')?.value||'').trim();
   const repPar   = (document.getElementById('ci-rep-parentesco')?.value||'').trim();
-  const fecha    = document.getElementById('ci-fecha')?.value||new Date().toISOString().split('T')[0];
+  const fecha    = document.getElementById('ci-fecha')?.value||fechaHoy();
   const tipo     = document.querySelector('input[name="ci-tipo"]:checked')?.value||'general';
   const dx       = (document.getElementById('ci-diagnostico')?.value||'').trim() || '______________________________';
   const proc     = (document.getElementById('ci-procedimiento')?.value||'').trim() || '______________________________';
@@ -15682,7 +15898,7 @@ function ciImprimir(){
 function ciDescargar(){
   ciRenderPreview();
   const pac=(document.getElementById('ci-pac-nombre')?.value||'Paciente').trim().replace(/\s+/g,'_');
-  const fecha=document.getElementById('ci-fecha')?.value||new Date().toISOString().split('T')[0];
+  const fecha=document.getElementById('ci-fecha')?.value||fechaHoy();
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Consentimiento Informado</title>
   <style>
     @page{size:letter portrait;margin:15mm}
@@ -15963,7 +16179,7 @@ function resDescargarHTML(){
   const id = document.getElementById('res-pac-select')?.value;
   if(!id){ toast('Selecciona un paciente primero','warn'); return; }
   const p = expedientes.find(x=>x.id===id);
-  const fecha = new Date().toISOString().split('T')[0];
+  const fecha = fechaHoy();
   const nombre = (p?.nombre||'Paciente').replace(/\s+/g,'_');
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Resumen Clínico — ${p?.nombre||''}</title>
   <style>body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:28px;max-width:760px;margin:0 auto}
@@ -15996,7 +16212,7 @@ function icBuildHTML(){
   const clinica = cfg.clinica || '';
   const dir     = cfg.dir     || '';
   const tel     = cfg.tel     || '';
-  const fecha   = document.getElementById('ic-fecha')?.value || new Date().toISOString().split('T')[0];
+  const fecha   = document.getElementById('ic-fecha')?.value || fechaHoy();
   const hora    = document.getElementById('ic-hora')?.value  || '';
   const folio   = document.getElementById('ic-folio')?.value || '___________';
   const servicioSolicita  = document.getElementById('ic-servicio-solicita')?.value  || '___________';
@@ -16082,7 +16298,7 @@ function icImprimir(){
 function icDescargar(){
   icRenderPreview();
   const pac=(document.getElementById('ic-pac-nombre')?.value||'Paciente').trim().replace(/\s+/g,'_');
-  const fecha=document.getElementById('ic-fecha')?.value||new Date().toISOString().split('T')[0];
+  const fecha=document.getElementById('ic-fecha')?.value||fechaHoy();
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Interconsulta</title>
   <style>body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:28px;max-width:720px;margin:0 auto}table{width:100%;border-collapse:collapse}@media print{@page{size:letter;margin:12mm}}</style>
   </head><body>${icBuildHTML()}</body></html>`;
@@ -16113,7 +16329,7 @@ function refBuildHTML(){
   const clinica = cfg.clinica || '';
   const dir     = cfg.dir     || '';
   const tel     = cfg.tel     || '';
-  const fecha   = document.getElementById('ref-fecha')?.value || new Date().toISOString().split('T')[0];
+  const fecha   = document.getElementById('ref-fecha')?.value || fechaHoy();
   const hora    = document.getElementById('ref-hora')?.value  || '';
   const folio   = document.getElementById('ref-folio')?.value || '___________';
   const origen  = document.getElementById('ref-origen')?.value  || clinica || '___________';
@@ -16211,7 +16427,7 @@ function refImprimir(){
 function refDescargar(){
   refRenderPreview();
   const pac=(document.getElementById('ref-pac-nombre')?.value||'Paciente').trim().replace(/\s+/g,'_');
-  const fecha=document.getElementById('ref-fecha')?.value||new Date().toISOString().split('T')[0];
+  const fecha=document.getElementById('ref-fecha')?.value||fechaHoy();
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Referencia/Traslado</title>
   <style>body{font-family:Arial,sans-serif;font-size:12px;color:#111;padding:28px;max-width:720px;margin:0 auto}table{width:100%;border-collapse:collapse}@media print{@page{size:letter;margin:12mm}}</style>
   </head><body>${refBuildHTML()}</body></html>`;
@@ -16222,7 +16438,7 @@ function refDescargar(){
 // Init fechas de interconsulta y referencia
 document.addEventListener('DOMContentLoaded', ()=>{
   setTimeout(()=>{
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = fechaHoy();
     const ahora = new Date().toTimeString().slice(0,5);
     ['ic-fecha','ref-fecha'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=hoy;});
     ['ic-hora','ref-hora'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=ahora;});
@@ -16235,7 +16451,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     cargarDatosLegalesGuardados();
     actualizarDatosLegales();
     const ciF=document.getElementById('ci-fecha');
-    if(ciF&&!ciF.value) ciF.value=new Date().toISOString().split('T')[0];
+    if(ciF&&!ciF.value) ciF.value=fechaHoy();
   }, 800);
 });
 
@@ -16342,7 +16558,7 @@ function _loadScript(src){
 
 async function rxGenerarQR(){
   const pac   = document.getElementById('rx-pac')?.value  || 'Paciente';
-  const fecha = document.getElementById('rx-fecha')?.value || new Date().toISOString().split('T')[0];
+  const fecha = document.getElementById('rx-fecha')?.value || fechaHoy();
   const meds  = [...document.querySelectorAll('[data-rx-row]')].map(r=>{
     const nom = r.querySelector('.rx-nom')?.value||'';
     const dos = r.querySelector('.rx-dos')?.value||'';
@@ -16485,38 +16701,92 @@ function auditLog(accion, detalle=''){
   };
   auditoria.unshift(entrada);
   if(auditoria.length > 500) auditoria = auditoria.slice(0,500);
-  LS.set('auditoria', auditoria);
+  _lsCache['auditoria'] = auditoria;
+  // Guardar en localStorage inmediatamente
+  try{ localStorage.setItem('auditoria', JSON.stringify(auditoria)); }catch{}
+  // Guardar en IDB con retry (fix Tauri/WebView2 — IDB puede no estar lista)
+  const _guardarIDB = (intentos) => {
+    idbSet('auditoria', auditoria).catch(e => {
+      if(intentos > 0) setTimeout(()=>_guardarIDB(intentos-1), 500);
+    });
+  };
+  _guardarIDB(3);
   log(accion + (detalle?' — '+detalle:''));
 }
 
 function renderAuditoria(){
   const el = document.getElementById('audit-tabla');
   if(!el) return;
-  const filtro = document.getElementById('audit-filtro')?.value?.toLowerCase()||'';
-  const lista = filtro ? auditoria.filter(a=>
-    a.accion.toLowerCase().includes(filtro)||
-    a.usuario.toLowerCase().includes(filtro)||
-    a.detalle.toLowerCase().includes(filtro)
-  ) : auditoria;
-  if(!lista.length){ el.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--so);padding:20px">Sin registros de auditoría</td></tr>'; return; }
-  el.innerHTML = lista.slice(0,200).map(a=>`
-    <tr style="border-bottom:1px solid var(--bd);font-size:12px">
-      <td style="padding:7px 10px;white-space:nowrap;color:var(--so)">${a.fecha}<br><span style="font-family:monospace;font-size:11px">${a.hora}</span></td>
-      <td style="padding:7px 10px;font-weight:700">${a.usuario}</td>
-      <td style="padding:7px 10px"><span style="background:var(--card);border-radius:5px;padding:2px 7px;font-size:11px">${a.rol}</span></td>
-      <td style="padding:7px 10px">${a.accion}</td>
-      <td style="padding:7px 10px;color:var(--so)">${a.detalle||'—'}</td>
-    </tr>`).join('');
+  const _render = (datos) => {
+    auditoria = datos; // sincronizar variable global
+    const filtro = document.getElementById('audit-filtro')?.value?.toLowerCase()||'';
+    const rolActual = (sessionUser?.rol || '').trim().toLowerCase();
+    const nombreActual = (sessionUser?.nombre || sessionUser?.usuario || '').trim();
+    const esAdmin = rolActual === 'admin';
+    const porRol = esAdmin
+      ? auditoria
+      : auditoria.filter(a => (a.usuario||'').trim() === nombreActual);
+    const lista = filtro ? porRol.filter(a=>
+      (a.accion||'').toLowerCase().includes(filtro)||
+      (a.usuario||'').toLowerCase().includes(filtro)||
+      (a.detalle||'').toLowerCase().includes(filtro)
+    ) : porRol;
+    const avisoEl = document.getElementById('audit-aviso-rol');
+    if(avisoEl){
+      if(esAdmin){
+        avisoEl.innerHTML = '<span style="color:var(--ac2)">👑 Administrador — viendo todos los movimientos de todos los usuarios</span>';
+      } else {
+        avisoEl.innerHTML = `<span style="color:var(--ac)">🔒 Solo estás viendo tus propios movimientos (${nombreActual})</span>`;
+      }
+    }
+    if(!lista.length){ el.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--so);padding:20px">Sin registros de auditoría</td></tr>'; return; }
+    el.innerHTML = lista.slice(0,200).map(a=>`
+      <tr style="border-bottom:1px solid var(--bd);font-size:12px">
+        <td style="padding:7px 10px;white-space:nowrap;color:var(--so)">${a.fecha}<br><span style="font-family:monospace;font-size:11px">${a.hora}</span></td>
+        <td style="padding:7px 10px;font-weight:700">${a.usuario}</td>
+        <td style="padding:7px 10px"><span style="background:var(--card);border-radius:5px;padding:2px 7px;font-size:11px">${a.rol}</span></td>
+        <td style="padding:7px 10px">${a.accion}</td>
+        <td style="padding:7px 10px;color:var(--so)">${a.detalle||'—'}</td>
+      </tr>`).join('');
+  };
+  // Leer desde todas las fuentes disponibles (fix Tauri/WebView2)
+  const _leerAuditoria = async () => {
+    // 1. Intentar IDB primero (fuente primaria en Tauri)
+    try{
+      const v = await idbGet('auditoria');
+      if(Array.isArray(v) && v.length > 0) return v;
+    }catch{}
+    // 2. Fallback a cache en memoria
+    if(Array.isArray(_lsCache['auditoria']) && _lsCache['auditoria'].length > 0)
+      return _lsCache['auditoria'];
+    // 3. Fallback a localStorage
+    try{
+      const raw = localStorage.getItem('auditoria');
+      if(raw){ const p = JSON.parse(raw); if(Array.isArray(p)) return p; }
+    }catch{}
+    return [];
+  };
+  _leerAuditoria().then(datos => {
+    auditoria = datos;
+    _lsCache['auditoria'] = datos;
+    _render(datos);
+  });
 }
 
 function exportarAuditoria(){
   if(!auditoria.length){ toast('No hay registros en la bitácora','warn'); return; }
+  const rolActual = (sessionUser?.rol || '').trim().toLowerCase();
+  const nombreActual = (sessionUser?.nombre || sessionUser?.usuario || '').trim();
+  const datos = (rolActual === 'admin')
+    ? auditoria
+    : auditoria.filter(a => (a.usuario||'').trim() === nombreActual);
+  if(!datos.length){ toast('No hay registros para exportar','warn'); return; }
   const csv = 'Fecha,Hora,Usuario,Rol,Acción,Detalle\n' +
-    auditoria.map(a=>`"${a.fecha}","${a.hora}","${a.usuario}","${a.rol}","${a.accion}","${a.detalle||''}"`).join('\n');
+    datos.map(a=>`"${a.fecha}","${a.hora}","${a.usuario}","${a.rol}","${a.accion}","${a.detalle||''}"`).join('\n');
   const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href=url; a.download=`Auditoria_MedBC_Pro_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+  a.href=url; a.download=`Auditoria_MedBC_Pro_${fechaHoy()}.csv`; a.click();
   URL.revokeObjectURL(url);
   toast('✅ Bitácora exportada en CSV');
 }
@@ -16570,6 +16840,17 @@ function _confirmarLogout(){
   try{ if(sessionUser) auditLog('🚪 Cierre de sesión','Usuario: '+sessionUser.nombre); }catch(e){}
   _alStop();
   _alHideWarning();
+  // 💾 Respaldo automático antes de cerrar sesión
+  if(typeof autoRespaldoAlLogout === 'function'){
+    autoRespaldoAlLogout().catch(()=>{}).finally(()=>{
+      _ejecutarLogout();
+    });
+  } else {
+    _ejecutarLogout();
+  }
+}
+
+function _ejecutarLogout(){
   // Resetear cfg en memoria para que el próximo login cargue su propia cfg
   cfg = {}; rxLogoDataURL=null; rxLogo2DataURL=null;
   sessionUser=null;
@@ -16954,7 +17235,7 @@ function abrirCQSinRegistro(){
   if(!modal) return;
   // Fecha por defecto
   const fd = document.getElementById('cqsr-fecha');
-  if(fd && !fd.value) fd.value = new Date().toISOString().split('T')[0];
+  if(fd && !fd.value) fd.value = fechaHoy();
   // Cargar historial
   cqsrRenderHistorial();
   modal.style.display = '';
@@ -16992,7 +17273,7 @@ function cqsrGuardar(){
     paciente: (document.getElementById('cqsr-nombre')?.value.trim())||'Paciente anónimo',
     edad:     (document.getElementById('cqsr-edad')?.value)||'—',
     sexo:     (document.getElementById('cqsr-sexo')?.value)||'—',
-    fecha:    document.getElementById('cqsr-fecha')?.value || new Date().toISOString().split('T')[0],
+    fecha:    document.getElementById('cqsr-fecha')?.value || fechaHoy(),
     tipo:     document.getElementById('cqsr-tipo')?.value || 'Consulta',
     motivo,
     subjetivo:  document.getElementById('cqsr-subjetivo')?.value||'',
@@ -17034,7 +17315,7 @@ function cqsrLimpiar(){
   });
   document.querySelectorAll('#cqsr-est-check .cq-est-btn.sel').forEach(b=>b.classList.remove('sel'));
   const fd = document.getElementById('cqsr-fecha');
-  if(fd) fd.value = new Date().toISOString().split('T')[0];
+  if(fd) fd.value = fechaHoy();
   const tipo = document.getElementById('cqsr-tipo');
   if(tipo) tipo.selectedIndex = 1;
 }
@@ -17075,7 +17356,7 @@ function cqsrGenerarReceta(){
   const nombre = (document.getElementById('cqsr-nombre')?.value.trim()) || 'Paciente anónimo';
   const edad   = (document.getElementById('cqsr-edad')?.value.trim())   || '';
   const sexo   = (document.getElementById('cqsr-sexo')?.value)          || 'Masculino';
-  const fecha  = document.getElementById('cqsr-fecha')?.value || new Date().toISOString().split('T')[0];
+  const fecha  = document.getElementById('cqsr-fecha')?.value || fechaHoy();
   const dx     = (document.getElementById('cqsr-dx')?.value||'').trim();
   const meds   = (document.getElementById('cqsr-meds')?.value||'').trim();
   const plan   = (document.getElementById('cqsr-plan')?.value||'').trim();
@@ -17131,7 +17412,7 @@ function cqsrGenerarOrdenLab(){
   const nombre  = (document.getElementById('cqsr-nombre')?.value.trim()) || 'Paciente anónimo';
   const edad    = (document.getElementById('cqsr-edad')?.value.trim())   || '—';
   const sexo    = (document.getElementById('cqsr-sexo')?.value)          || '—';
-  const fecha   = document.getElementById('cqsr-fecha')?.value || new Date().toISOString().split('T')[0];
+  const fecha   = document.getElementById('cqsr-fecha')?.value || fechaHoy();
   const fechaFmt= fecha.split('-').reverse().join('/');
   const dx      = (document.getElementById('cqsr-dx')?.value||'').trim();
 
@@ -18738,6 +19019,10 @@ function finInicializar(){
   // Ocultar cards de ingreso/egreso general para médicos (solo ven sus consultas)
   document.querySelectorAll('.fin-card-admin').forEach(c => { c.style.display = (rol==='admin'||rol==='recepcion') ? '' : 'none'; });
 
+  // Botón "Enviar a cobro (recepción)": solo visible para médico y admin
+  const btnEnviar = document.getElementById('fin-btn-enviar-orden');
+  if(btnEnviar) btnEnviar.style.display = (rol === 'recepcion') ? 'none' : '';
+
   // Stats ocultas para recepción
   const sw = document.getElementById('fin-stats-wrap');
   if(sw) sw.style.display = (rol==='recepcion') ? 'none' : '';
@@ -18747,7 +19032,7 @@ function finInicializar(){
   if(cobro) cobro.style.display = '';
 
   // Fechas por defecto
-  const hoy = new Date().toISOString().slice(0,10);
+  const hoy = fechaHoy();
   ['fin-fecha-consulta','fin-ingreso-fecha','fin-egreso-fecha'].forEach(id => {
     const el = document.getElementById(id); if(el && !el.value) el.value = hoy;
   });
@@ -18825,7 +19110,7 @@ function finTab(tab){
   document.querySelectorAll('[id^="fin-tc-"]').forEach(t => t.classList.toggle('active', t.id==='fin-tc-'+tab));
   const su = (typeof sessionUser !== 'undefined') ? sessionUser : null;
   const rol = su?.rol || 'recepcion';
-  if(tab==='movimientos') finRenderMovimientos();
+  if(tab==='movimientos'){ finMovSetPeriodo(finMovGetPeriodo()); finPoblarFiltrosUsuario(); finRenderMovimientos(); }
   if(tab==='balance' && rol==='admin') finRenderBalance();
   if(tab==='mis-consultas') finRenderMisConsultas();
   if(tab==='pendientes') finRenderPendientes();
@@ -18840,19 +19125,23 @@ function finRegistrarConsulta(){
   const tipo     = document.getElementById('fin-tipo-consulta')?.value || 'primera';
   const forma    = document.getElementById('fin-forma-pago-consulta')?.value || 'efectivo';
   const medico   = document.getElementById('fin-medico-cobro')?.value.trim() || '';
-  const fecha    = document.getElementById('fin-fecha-consulta')?.value || new Date().toISOString().slice(0,10);
+  const fecha    = document.getElementById('fin-fecha-consulta')?.value || fechaHoy();
   const notas    = document.getElementById('fin-notas-consulta')?.value.trim() || '';
   const motivoDesc = document.getElementById('fin-motivo-desc')?.value.trim() || '';
   if(!pac){ toast('⚠️ Ingresa el nombre del paciente','err'); return; }
   if(!monto){ toast('⚠️ Ingresa el monto de la consulta','err'); return; }
   const su = (typeof sessionUser !== 'undefined') ? sessionUser : null;
+  const _ahora = new Date();
+  const _hora = _ahora.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true});
   const reg = { id:finUID(), tipo:'consulta', paciente:pac, tipoConsulta:tipo, monto, descuento,
     pctDescuento: monto>0?+((descuento/monto)*100).toFixed(1):0, motivoDesc, total, formaPago:forma,
     medico: medico||(su?.nombre||su?.user||''), medicoId: su?.user||su?.usuario||'',
-    fecha, notas, creadoPor:su?.user||su?.usuario||'', creadoEn:new Date().toLocaleString('es-MX') };
+    cobradoPor: su?.nombre||(su?.user||su?.usuario||''),
+    medicoOrigen: medico || '',
+    fecha, hora:_hora, notas, creadoPor:su?.user||su?.usuario||'', creadoEn:_ahora.toLocaleString('es-MX') };
   const arr = finGet(); arr.push(reg); finSave(arr);
   finLimpiarConsulta(); finRenderStats();
-  toast('✅ Cobro registrado — $' + total.toFixed(2));
+  auditLog('💰 Cobro registrado', `${pac} · $${total.toFixed(2)}`);toast('✅ Cobro registrado — $' + total.toFixed(2));
   if(typeof logActividad==='function') logActividad(`💰 Cobro: ${pac} · $${total.toFixed(2)}`);
   }catch(e){ console.error('finRegistrarConsulta error:',e); toast('❌ Error al registrar: '+e.message,'err'); }
 }
@@ -18868,13 +19157,15 @@ function finRegistrarIngreso(){
   const concepto = document.getElementById('fin-ingreso-concepto')?.value.trim()||'';
   const monto    = parseFloat(document.getElementById('fin-ingreso-monto')?.value)||0;
   const forma    = document.getElementById('fin-ingreso-forma')?.value||'efectivo';
-  const fecha    = document.getElementById('fin-ingreso-fecha')?.value||new Date().toISOString().slice(0,10);
+  const fecha    = document.getElementById('fin-ingreso-fecha')?.value||fechaHoy();
   const notas    = document.getElementById('fin-ingreso-notas')?.value.trim()||'';
   if(!concepto){ toast('⚠️ Escribe el concepto del ingreso','err'); return; }
   if(!monto){ toast('⚠️ Ingresa el monto','err'); return; }
   const su = (typeof sessionUser!=='undefined') ? sessionUser : null;
+  const _ahoraI = new Date();
+  const _horaI = _ahoraI.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true});
   const reg = { id:finUID(), tipo:'ingreso', concepto, monto, total:monto, formaPago:forma,
-    fecha, notas, creadoPor:su?.usuario||'', creadoEn:new Date().toLocaleString('es-MX') };
+    fecha, hora:_horaI, notas, creadoPor:su?.nombre||(su?.user||su?.usuario||''), creadoEn:_ahoraI.toLocaleString('es-MX') };
   const arr = finGet(); arr.push(reg); finSave(arr);
   ['fin-ingreso-concepto','fin-ingreso-monto','fin-ingreso-notas'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   finRenderStats();
@@ -18886,13 +19177,15 @@ function finRegistrarEgreso(){
   const categoria = document.getElementById('fin-egreso-cat')?.value||'otros';
   const monto     = parseFloat(document.getElementById('fin-egreso-monto')?.value)||0;
   const forma     = document.getElementById('fin-egreso-forma')?.value||'efectivo';
-  const fecha     = document.getElementById('fin-egreso-fecha')?.value||new Date().toISOString().slice(0,10);
+  const fecha     = document.getElementById('fin-egreso-fecha')?.value||fechaHoy();
   const notas     = document.getElementById('fin-egreso-notas')?.value.trim()||'';
   if(!concepto){ toast('⚠️ Escribe el concepto del gasto','err'); return; }
   if(!monto){ toast('⚠️ Ingresa el monto','err'); return; }
   const su = (typeof sessionUser!=='undefined') ? sessionUser : null;
+  const _ahoraE = new Date();
+  const _horaE = _ahoraE.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',hour12:true});
   const reg = { id:finUID(), tipo:'egreso', concepto, categoria, monto, total:monto, formaPago:forma,
-    fecha, notas, creadoPor:su?.usuario||'', creadoEn:new Date().toLocaleString('es-MX') };
+    fecha, hora:_horaE, notas, creadoPor:su?.nombre||(su?.user||su?.usuario||''), creadoEn:_ahoraE.toLocaleString('es-MX') };
   const arr = finGet(); arr.push(reg); finSave(arr);
   ['fin-egreso-concepto','fin-egreso-monto','fin-egreso-notas'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   finRenderStats();
@@ -18903,8 +19196,10 @@ function finEliminar(id){
   const su = (typeof sessionUser!=='undefined') ? sessionUser : null;
   if(su?.rol!=='admin'){ toast('Solo el administrador puede eliminar registros','err'); return; }
   if(!confirm('¿Eliminar este registro? No se puede deshacer.')) return;
+  const regElim = finGet().find(r=>r.id===id);
+  auditLog('🗑️ Cobro eliminado', regElim ? `${regElim.paciente||''} · $${regElim.total||0}` : id);
   finSave(finGet().filter(r=>r.id!==id));
-  finRenderMovimientos(); finRenderStats();
+  finMovSetPeriodo('mes'); finPoblarFiltrosUsuario(); finRenderStats();
   toast('🗑️ Registro eliminado');
 }
 
@@ -18920,11 +19215,11 @@ function finRenderStats(){
   if(esMedico) arr = arr.filter(r => r.tipo !== 'consulta' || r.medicoId === usuId || r.medico === usuNombre);
   const hoy = new Date();
   const mes = hoy.getMonth()+1, anio = hoy.getFullYear();
-  const esMes = r => { const d=new Date(r.fecha); return d.getMonth()+1===mes && d.getFullYear()===anio; };
+  const esMes = r => { const p=(r.fecha||'').split('-'); return parseInt(p[1])===mes && parseInt(p[0])===anio; };
   const ingMes  = arr.filter(r=>(r.tipo==='consulta'||r.tipo==='ingreso')&&esMes(r)).reduce((s,r)=>s+(r.total||0),0);
   const egrMes  = esMedico ? 0 : arr.filter(r=>r.tipo==='egreso'&&esMes(r)).reduce((s,r)=>s+(r.total||0),0);
   const balMes  = ingMes - egrMes;
-  const consHoy = arr.filter(r=>r.tipo==='consulta'&&r.fecha===hoy.toISOString().slice(0,10)).length;
+  const consHoy = arr.filter(r=>r.tipo==='consulta'&&r.fecha===fechaHoy(hoy)).length;
   const fmt = n => '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
   el.innerHTML = `
     <div class="fin-sc" style="--fc:var(--ac2)"><div class="fin-sn">${fmt(ingMes)}</div><div class="fin-sl">💵 Ingresos del mes</div></div>
@@ -18934,13 +19229,90 @@ function finRenderStats(){
   }catch(e){ console.error('finRenderStats error:',e); }
 }
 
+function finPoblarFiltrosUsuario(){
+  const tabsEl = document.getElementById('fin-fil-usuario-tabs');
+  if(!tabsEl) return;
+  const su = (typeof sessionUser !== 'undefined') ? sessionUser : null;
+  if(!su || su.rol !== 'admin'){ tabsEl.style.display='none'; return; }
+  // Recopilar usuarios únicos de los movimientos
+  const arr = finGet();
+  const usuariosMap = {}; // key -> {nombre, rol, count}
+  arr.forEach(r => {
+    // Para consultas: el médico que hizo la consulta
+    if(r.tipo === 'consulta'){
+      const k = r.medicoId || r.medico || '';
+      const n = r.medico || r.medicoId || 'Sin asignar';
+      if(k){ if(!usuariosMap[k]) usuariosMap[k]={nombre:n,rol:'medico',count:0}; usuariosMap[k].count++; }
+    }
+    // Para ingresos/egresos: quien lo creó
+    const cp = r.creadoPor || '';
+    if(cp && r.tipo !== 'consulta'){
+      if(!usuariosMap[cp]) usuariosMap[cp]={nombre:cp,rol:'admin',count:0};
+      usuariosMap[cp].count++;
+    }
+  });
+  // Colores por rol
+  const rolColor = {admin:'var(--ac)',medico:'var(--ac2)',recepcion:'var(--am)'};
+  // Estado activo (guardado en dataset del contenedor)
+  const activo = tabsEl.dataset.usuActivo || 'todos';
+  // Construir pestañas
+  let html = `<button onclick="finFiltrarUsuario('todos')" style="padding:5px 13px;border-radius:20px;border:1px solid var(--bd);background:${'todos'===activo?'var(--ac)':'var(--card)'};color:${'todos'===activo?'#fff':'var(--tx)'};font-size:12px;font-weight:600;cursor:pointer;transition:.2s">🏥 Todos</button>`;
+  // Agregar también usuarios del sistema aunque no tengan movimientos aún
+  try{
+    const todosUsr = getUsuarios ? getUsuarios() : [];
+    todosUsr.forEach(u => {
+      if(!usuariosMap[u.user] && !usuariosMap[u.nombre]) usuariosMap[u.user]={nombre:u.nombre||u.user,rol:u.rol,count:0};
+    });
+  }catch(e){}
+  Object.entries(usuariosMap).sort((a,b)=>{
+    const order={admin:0,recepcion:1,medico:2};
+    return (order[a[1].rol]||3)-(order[b[1].rol]||3);
+  }).forEach(([k,v])=>{
+    const isAct = activo===k;
+    const icon = v.rol==='admin'?'🛡️':v.rol==='recepcion'?'🗂️':'👨‍⚕️';
+    const color = isAct?(rolColor[v.rol]||'var(--ac)'):'var(--card)';
+    const border = rolColor[v.rol]||'var(--bd)';
+    html += `<button onclick="finFiltrarUsuario('${k}')" style="padding:5px 13px;border-radius:20px;border:1px solid ${border};background:${color};color:${isAct?'#fff':'var(--tx)'};font-size:12px;font-weight:600;cursor:pointer;transition:.2s" title="${v.rol}">${icon} ${v.nombre}${v.count>0?' <span style=\"opacity:.7;font-size:10px\">('+v.count+')</span>':''}</button>`;
+  });
+  tabsEl.innerHTML = html;
+  tabsEl.style.display = 'flex';
+}
+
+function finFiltrarUsuario(key){
+  const tabsEl = document.getElementById('fin-fil-usuario-tabs');
+  if(tabsEl) tabsEl.dataset.usuActivo = key;
+  finPoblarFiltrosUsuario(); // re-render tabs with new active
+  finRenderMovimientos();
+}
+
 function finPoblarFiltrosMeses(){
   const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const hoy=new Date(); const mesAct=hoy.getMonth()+1; const anioAct=hoy.getFullYear();
   const optsMeses = '<option value="todos">Todos los meses</option>'+meses.map((m,i)=>`<option value="${i+1}" ${i+1===mesAct?'selected':''}>${m}</option>`).join('');
   let optsAnios=''; for(let y=anioAct;y>=anioAct-4;y--) optsAnios+=`<option value="${y}" ${y===anioAct?'selected':''}>${y}</option>`;
   ['fin-fil-mes','fin-mc-mes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=optsMeses; });
-  ['fin-bal-anio','fin-mc-anio'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=optsAnios; });
+  ['fin-bal-anio','fin-bal-anio-mes','fin-mc-anio','fin-mc-anio2','fin-fil-anio','fin-fil-anio-mes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.innerHTML=optsAnios; });
+}
+
+function finMovSetPeriodo(p){
+  ['mes','anio','dia'].forEach(t=>{
+    const btn=document.getElementById('fin-mov-tab-'+t);
+    const ctrl=document.getElementById('fin-mov-ctrl-'+t);
+    if(btn) btn.className='fin-bal-tab'+(t===p?' fin-bal-tab-act':'');
+    if(ctrl) ctrl.style.display=t===p?'flex':'none';
+  });
+  if(p==='dia'){
+    const dEl=document.getElementById('fin-fil-dia');
+    if(dEl&&!dEl.value) dEl.value=fechaHoy();
+  }
+  finPoblarFiltrosUsuario();
+  finRenderMovimientos();
+}
+
+function finMovGetPeriodo(){
+  if(document.getElementById('fin-mov-tab-dia')?.classList.contains('fin-bal-tab-act')) return 'dia';
+  if(document.getElementById('fin-mov-tab-anio')?.classList.contains('fin-bal-tab-act')) return 'anio';
+  return 'mes';
 }
 
 function finRenderMovimientos(){
@@ -18955,9 +19327,27 @@ function finRenderMovimientos(){
   // Médicos solo ven sus propias consultas, no egresos ni ingresos del consultorio
   if(esMedico) arr = arr.filter(r => r.tipo === 'consulta' && (r.medicoId === usuId || r.medico === usuNombre));
   const ft = document.getElementById('fin-fil-tipo')?.value||'todos';
-  const fm = document.getElementById('fin-fil-mes')?.value||'todos';
+  const fuTab = document.getElementById('fin-fil-usuario-tabs');
+  const fu = fuTab ? (fuTab.dataset.usuActivo||'todos') : 'todos';
+  const periodo = finMovGetPeriodo();
+  // Filtro de periodo
+  if(periodo==='dia'){
+    const diaVal = document.getElementById('fin-fil-dia')?.value||fechaHoy();
+    arr=arr.filter(r=>r.fecha===diaVal);
+  } else if(periodo==='anio'){
+    const anio = parseInt(document.getElementById('fin-fil-anio')?.value)||new Date().getFullYear();
+    arr=arr.filter(r=>parseInt((r.fecha||'').split('-')[0])===anio);
+  } else {
+    // mes (default)
+    const fm = document.getElementById('fin-fil-mes')?.value||String(new Date().getMonth()+1);
+    const anioM = parseInt(document.getElementById('fin-fil-anio-mes')?.value)||new Date().getFullYear();
+    if(fm!=='todos') arr=arr.filter(r=>parseInt((r.fecha||'').split('-')[1])===parseInt(fm) && parseInt((r.fecha||'').split('-')[0])===anioM);
+  }
   if(ft!=='todos') arr=arr.filter(r=>r.tipo===ft);
-  if(fm!=='todos') arr=arr.filter(r=>(new Date(r.fecha).getMonth()+1)===parseInt(fm));
+  if(fu!=='todos') arr=arr.filter(r=>{
+    if(r.tipo==='consulta') return (r.medicoId===fu||r.medico===fu);
+    return (r.creadoPor===fu||r.creadoPor===(()=>{try{return (getUsuarios()||[]).find(u=>u.user===fu)?.nombre||fu;}catch(e){return fu;}})());
+  });
   arr=arr.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha));
   if(!arr.length){ el.innerHTML='<div class="fin-empty">Sin registros para los filtros seleccionados.</div>'; return; }
   const totalIng=arr.filter(r=>r.tipo!=='egreso').reduce((s,r)=>s+(r.total||0),0);
@@ -18977,9 +19367,9 @@ function finRenderMovimientos(){
       const con=r.tipo==='consulta'?`${r.paciente} (${r.tipoConsulta||'consulta'})`:r.concepto;
       const dsc=r.descuento>0?`<br><span style="font-size:10px;color:var(--am)">Dto: -$${r.descuento.toFixed(2)}${r.motivoDesc?' · '+r.motivoDesc:''}</span>`:'';
       return `<div class="fin-row fin-row-mov">
-        <span style="color:var(--so)">${r.fecha}</span>
+        <span style="color:var(--so)">${r.fecha}${r.hora?'<br><span style="font-size:10px;color:var(--mu)">🕐 '+r.hora+'</span>':r.creadoEn?'<br><span style="font-size:10px;color:var(--mu)">🕐 '+r.creadoEn.split(' ').slice(1).join(' ')+'</span>':''}</span>
         <span><span class="${bc}">${bt}</span></span>
-        <span>${con}${dsc}${r.medico?`<br><span style='font-size:10px;color:var(--mu)'>👨‍⚕️ ${r.medico}</span>`:''}</span>
+        <span>${con}${dsc}${(()=>{if(r.tipo==='consulta'){if(r.cobradoPor&&r.medicoOrigen&&r.cobradoPor!==r.medicoOrigen)return '<br><span style="font-size:10px;color:var(--ac)">💳 Cobró: '+r.cobradoPor+'</span><br><span style="font-size:10px;color:var(--mu)">👨‍⚕️ Médico: '+r.medicoOrigen+'</span>';if(r.cobradoPor)return '<br><span style="font-size:10px;color:var(--mu)">👤 '+r.cobradoPor+'</span>';if(r.medico)return '<br><span style="font-size:10px;color:var(--mu)">👨‍⚕️ '+r.medico+'</span>';return '';}return r.creadoPor?'<br><span style="font-size:10px;color:var(--mu)">👤 '+r.creadoPor+'</span>':'';})()} </span>
         <span style="color:var(--so)">${formaL[r.formaPago]||r.formaPago||'—'}</span>
         <span style="text-align:right;font-family:'DM Mono',monospace">$${(r.monto||r.total||0).toFixed(2)}</span>
         <span style="text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${r.tipo==='egreso'?'var(--rd)':'var(--ac2)'}">$${(r.total||0).toFixed(2)}</span>
@@ -18989,24 +19379,73 @@ function finRenderMovimientos(){
   }catch(e){ console.error('finRenderMovimientos error:',e); el.innerHTML='<div class="fin-empty">Error al cargar movimientos.</div>'; }
 }
 
+function finBalSetPeriodo(p){
+  ['anio','mes','dia'].forEach(t=>{
+    const btn=document.getElementById('fin-bal-tab-'+t);
+    const ctrl=document.getElementById('fin-bal-ctrl-'+t);
+    if(btn) btn.className='fin-bal-tab'+(t===p?' fin-bal-tab-act':'');
+    if(ctrl) ctrl.style.display=t===p?'flex':'none';
+  });
+  if(p==='dia'){
+    const dEl=document.getElementById('fin-bal-dia');
+    if(dEl&&!dEl.value) dEl.value=fechaHoy();
+  }
+  if(p==='mes'){
+    const anioEl=document.getElementById('fin-bal-anio');
+    const anioMesEl=document.getElementById('fin-bal-anio-mes');
+    if(anioEl&&anioMesEl&&!anioMesEl.innerHTML){ anioMesEl.innerHTML=anioEl.innerHTML; anioMesEl.value=anioEl.value; }
+    const mesEl=document.getElementById('fin-bal-mes');
+    if(mesEl&&!mesEl.dataset.touched) mesEl.value=new Date().getMonth()+1;
+  }
+  finRenderBalance();
+}
+
+function finBalGetPeriodo(){
+  if(document.getElementById('fin-bal-tab-dia')?.classList.contains('fin-bal-tab-act')) return 'dia';
+  if(document.getElementById('fin-bal-tab-mes')?.classList.contains('fin-bal-tab-act')) return 'mes';
+  return 'anio';
+}
+
 function finRenderBalance(){
   const su=(typeof sessionUser!=='undefined')?sessionUser:null;
   if(su?.rol!=='admin') return;
-  const anio=parseInt(document.getElementById('fin-bal-anio')?.value)||new Date().getFullYear();
-  const mesF=document.getElementById('fin-bal-mes')?.value||'todos';
-  let arr=finGet().filter(r=>new Date(r.fecha).getFullYear()===anio);
-  if(mesF!=='todos') arr=arr.filter(r=>new Date(r.fecha).getMonth()+1===parseInt(mesF));
+  const periodo=finBalGetPeriodo();
+  const hoy=new Date();
+  const fmt=n=>'$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  let arr=finGet(), labelPeriodo='', anioChart=hoy.getFullYear();
+
+  if(periodo==='dia'){
+    const dEl=document.getElementById('fin-bal-dia');
+    const diaVal=dEl?.value||fechaHoy();
+    arr=arr.filter(r=>r.fecha===diaVal);
+    const [y,m,d]=diaVal.split('-');
+    labelPeriodo=`${parseInt(d)} de ${meses[parseInt(m)-1]} ${y}`;
+    anioChart=parseInt(y);
+  } else if(periodo==='mes'){
+    const anio=parseInt(document.getElementById('fin-bal-anio-mes')?.value)||hoy.getFullYear();
+    const mesF=parseInt(document.getElementById('fin-bal-mes')?.value)||hoy.getMonth()+1;
+    arr=arr.filter(r=>parseInt((r.fecha||'').split('-')[0])===anio && parseInt((r.fecha||'').split('-')[1])===mesF);
+    labelPeriodo=`${meses[mesF-1]} ${anio}`;
+    anioChart=anio;
+  } else {
+    const anio=parseInt(document.getElementById('fin-bal-anio')?.value)||hoy.getFullYear();
+    arr=arr.filter(r=>parseInt((r.fecha||'').split('-')[0])===anio);
+    labelPeriodo=`Año ${anio}`;
+    anioChart=anio;
+  }
+
   const totalIng=arr.filter(r=>r.tipo!=='egreso').reduce((s,r)=>s+(r.total||0),0);
   const totalEgr=arr.filter(r=>r.tipo==='egreso').reduce((s,r)=>s+(r.total||0),0);
   const balance=totalIng-totalEgr;
-  const fmt=n=>'$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const nConsultas=arr.filter(r=>r.tipo==='consulta').length;
   const cards=document.getElementById('fin-bal-cards');
   if(cards) cards.innerHTML=`
-    <div class="fin-sc" style="--fc:var(--ac2)"><div class="fin-sn">${fmt(totalIng)}</div><div class="fin-sl">💵 Total ingresos</div></div>
-    <div class="fin-sc" style="--fc:var(--rd)"><div class="fin-sn">${fmt(totalEgr)}</div><div class="fin-sl">📤 Total egresos</div></div>
-    <div class="fin-sc" style="--fc:${balance>=0?'var(--ac2)':'var(--rd)'}"><div class="fin-sn" style="color:${balance>=0?'var(--ac2)':'var(--rd)'}">${fmt(balance)}</div><div class="fin-sl">📊 Balance neto</div></div>
-    <div class="fin-sc" style="--fc:var(--ac)"><div class="fin-sn">${arr.filter(r=>r.tipo==='consulta').length}</div><div class="fin-sl">🩺 Consultas</div></div>`;
-  finRenderChartBalance(anio);
+    <div class="fin-sc" style="--fc:var(--ac2)"><div class="fin-sn">${fmt(totalIng)}</div><div class="fin-sl">💵 Ingresos · ${labelPeriodo}</div></div>
+    <div class="fin-sc" style="--fc:var(--rd)"><div class="fin-sn">${fmt(totalEgr)}</div><div class="fin-sl">📤 Egresos · ${labelPeriodo}</div></div>
+    <div class="fin-sc" style="--fc:${balance>=0?'var(--ac2)':'var(--rd)'}"><div class="fin-sn" style="color:${balance>=0?'var(--ac2)':'var(--rd)'}">${fmt(balance)}</div><div class="fin-sl">📊 Balance neto · ${labelPeriodo}</div></div>
+    <div class="fin-sc" style="--fc:var(--ac)"><div class="fin-sn">${nConsultas}</div><div class="fin-sl">🩺 Consultas · ${labelPeriodo}</div></div>`;
+  finRenderChartBalance(anioChart);
   finRenderChartCat(arr);
   finRenderChartForma(arr);
 }
@@ -19016,9 +19455,9 @@ function finRenderChartBalance(anio){
   if(!canvas||typeof Chart==='undefined') return;
   if(canvas._ci){canvas._ci.destroy();canvas._ci=null;}
   const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const arr=finGet().filter(r=>new Date(r.fecha).getFullYear()===anio);
+  const arr=finGet().filter(r=>parseInt((r.fecha||'').split('-')[0])===anio);
   const ing=Array(12).fill(0), egr=Array(12).fill(0);
-  arr.forEach(r=>{ const m=new Date(r.fecha).getMonth(); r.tipo!=='egreso'?ing[m]+=(r.total||0):egr[m]+=(r.total||0); });
+  arr.forEach(r=>{ const m=parseInt((r.fecha||'').split('-')[1])-1; r.tipo!=='egreso'?ing[m]+=(r.total||0):egr[m]+=(r.total||0); });
   canvas._ci=new Chart(canvas,{type:'bar',data:{labels:meses,datasets:[
     {label:'Ingresos',data:ing,backgroundColor:'rgba(63,182,139,.7)',borderRadius:4},
     {label:'Egresos', data:egr,backgroundColor:'rgba(248,81,73,.6)', borderRadius:4}
@@ -19056,6 +19495,21 @@ function finRenderChartForma(arr){
     options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#8B949E',font:{size:10},boxWidth:12,padding:8}}}}});
 }
 
+function finMcSetPeriodo(p){
+  ['mes','anio','dia'].forEach(t=>{
+    const btn=document.getElementById('fin-mc-tab-'+t);
+    const ctrl=document.getElementById('fin-mc-ctrl-'+t);
+    if(btn) btn.classList.toggle('fin-bal-tab-act', t===p);
+    if(ctrl) ctrl.style.display = t===p ? 'flex' : 'none';
+  });
+  // Si es día, poner fecha de hoy por defecto
+  if(p==='dia'){
+    const dEl=document.getElementById('fin-mc-dia');
+    if(dEl && !dEl.value) dEl.value = fechaHoy();
+  }
+  finRenderMisConsultas();
+}
+
 function finRenderMisConsultas(){
   const el=document.getElementById('fin-mis-consultas-table');
   const stEl=document.getElementById('fin-mis-consultas-stats');
@@ -19066,11 +19520,22 @@ function finRenderMisConsultas(){
   const usuNombre=su?.nombre||usuId;
   const mesF=document.getElementById('fin-mc-mes')?.value||'todos';
   const anioF=parseInt(document.getElementById('fin-mc-anio')?.value)||new Date().getFullYear();
+  // Detectar período activo
+  const periodoActivo = document.getElementById('fin-mc-tab-anio')?.classList.contains('fin-bal-tab-act') ? 'anio'
+    : document.getElementById('fin-mc-tab-dia')?.classList.contains('fin-bal-tab-act') ? 'dia' : 'mes';
+  const anioF2=parseInt(document.getElementById('fin-mc-anio2')?.value)||new Date().getFullYear();
+  const diaF=document.getElementById('fin-mc-dia')?.value||fechaHoy();
   let arr=finGet().filter(r=>r.tipo==='consulta');
   // Admin y médico: ambos ven solo sus propias consultas en "Mis Consultas"
   arr=arr.filter(r=>r.medicoId===usuId||r.medico===usuNombre);
-  arr=arr.filter(r=>new Date(r.fecha).getFullYear()===anioF);
-  if(mesF!=='todos') arr=arr.filter(r=>(new Date(r.fecha).getMonth()+1)===parseInt(mesF));
+  if(periodoActivo==='dia'){
+    arr=arr.filter(r=>r.fecha===diaF);
+  } else if(periodoActivo==='anio'){
+    arr=arr.filter(r=>parseInt((r.fecha||'').split('-')[0])===anioF2);
+  } else {
+    arr=arr.filter(r=>parseInt((r.fecha||'').split('-')[0])===anioF);
+    if(mesF!=='todos') arr=arr.filter(r=>(parseInt((r.fecha||'').split('-')[1]))===parseInt(mesF));
+  }
   arr=arr.slice().sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const tBruto=arr.reduce((s,r)=>s+(r.monto||0),0);
   const tDesc =arr.reduce((s,r)=>s+(r.descuento||0),0);
@@ -19085,7 +19550,7 @@ function finRenderMisConsultas(){
     <div class="fin-th fin-row-consulta"><span>Paciente / Tipo</span><span>Fecha</span><span style="text-align:right">Monto</span><span style="text-align:right">Descuento</span><span style="text-align:right">Total</span><span></span></div>
     ${arr.map(r=>`<div class="fin-row fin-row-consulta">
       <span><strong style="color:var(--tx)">${r.paciente}</strong><br><span style="font-size:10px;color:var(--so)">${r.tipoConsulta||'consulta'} · ${r.formaPago||''}</span></span>
-      <span style="color:var(--so)">${r.fecha}</span>
+      <span style="color:var(--so)">${r.fecha}${r.hora?`<br><span style='font-size:10px;color:var(--mu)'>🕐 ${r.hora}</span>`:r.creadoEn?`<br><span style='font-size:10px;color:var(--mu)'>🕐 ${r.creadoEn.split(' ').slice(1).join(' ')}</span>`:''}</span>
       <span style="text-align:right;font-family:'DM Mono',monospace">$${(r.monto||0).toFixed(2)}</span>
       <span style="text-align:right;color:var(--am);font-family:'DM Mono',monospace">${r.descuento>0?'-$'+r.descuento.toFixed(2):'—'}</span>
       <span style="text-align:right;font-weight:700;color:var(--ac2);font-family:'DM Mono',monospace">$${(r.total||0).toFixed(2)}</span>
@@ -19101,7 +19566,7 @@ function finExportarCSV(){
   const csv=[headers,...rows].map(r=>r.join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=`finanzas_medbc_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
+  const a=document.createElement('a'); a.href=url; a.download=`finanzas_medbc_${fechaHoy()}.csv`; a.click(); URL.revokeObjectURL(url);
   toast('📥 CSV exportado');
 }
 
@@ -19209,12 +19674,14 @@ function cobRapidoConfirmar(){
       concepto:conceptoNombre, monto, descuento:desc,
       pctDescuento:monto>0?+((desc/monto)*100).toFixed(1):0,
       motivoDesc:'', total, formaPago:forma, medico, medicoId,
-      fecha:new Date().toISOString().slice(0,10),
+      cobradoPor: su?.nombre||su?.user||'',
+      medicoOrigen: medico,
+      fecha:fechaHoy(),
       hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
       notas:'', creadoPor:medicoId, creadoEn:new Date().toLocaleString('es-MX')
     };
     const arr=finGet(); arr.push(reg); finSave(arr);
-    toast(`✅ Cobro registrado — $${total.toFixed(2)} · ${forma}`);
+    auditLog('💰 Cobro rápido registrado', `${pac} · $${total.toFixed(2)} · ${forma}`);toast(`✅ Cobro registrado — $${total.toFixed(2)} · ${forma}`);
     if(typeof logActividad==='function') logActividad(`💰 Cobro: ${pac} · $${total.toFixed(2)}`);
   }
   cobRapidoCerrar();
@@ -19223,9 +19690,36 @@ function cobRapidoConfirmar(){
 
 function cobRapidoCerrar(){
   const modal=document.getElementById('modal-cobro-rapido');
-  if(modal) modal.style.display='none';
+  if(modal){
+    // Fix Tauri/WebView2: forzar cierre con múltiples métodos
+    modal.style.display='none';
+    modal.style.visibility='hidden';
+    modal.style.opacity='0';
+    modal.style.pointerEvents='none';
+    // Restaurar después para próxima apertura
+    setTimeout(()=>{
+      modal.style.visibility='';
+      modal.style.opacity='';
+      modal.style.pointerEvents='';
+    }, 300);
+  }
+  // Limpiar campos
+  try{ document.getElementById('cobro-rapido-paciente').value=''; }catch{}
+  try{ document.getElementById('cobro-rapido-monto').value=''; }catch{}
+  try{ document.getElementById('cobro-rapido-descuento').value='0'; }catch{}
+  try{ document.getElementById('cobro-rapido-concepto').selectedIndex=0; }catch{}
+  try{ document.getElementById('cobro-rapido-total').textContent='$0.00'; }catch{}
+  try{ document.getElementById('cobro-rapido-subtitulo').textContent='Servicio prestado'; }catch{}
   if(typeof nav==='function') nav('dashboard');
 }
+
+// ── Listeners para botones de cobro rápido (fix Tauri/WebView2) ──
+document.addEventListener('DOMContentLoaded', function(){
+  const btnConf = document.getElementById('btn-cobro-confirmar');
+  const btnOmit = document.getElementById('btn-cobro-omitir');
+  if(btnConf) btnConf.addEventListener('click', function(e){ e.preventDefault(); cobRapidoConfirmar(); });
+  if(btnOmit) btnOmit.addEventListener('click', function(e){ e.preventDefault(); cobRapidoCerrar(); });
+});
 
 const CFG_CONCEPTOS_KEY = 'medbc_conceptos_cobro';
 function cfgConceptosGet(){ return LS.get(CFG_CONCEPTOS_KEY, []); }
@@ -19349,9 +19843,11 @@ function finEjecutarOrden(id){
     pctDescuento:o.monto>0?+((o.descuento/o.monto)*100).toFixed(1):0,
     motivoDesc:o.motivoDesc, total:o.total,
     formaPago, medico:o.medico, medicoId:o.medicoId||'',
-    fecha:new Date().toISOString().slice(0,10),
+    cobradoPor: (typeof sessionUser!=='undefined'?(sessionUser?.nombre||sessionUser?.user):'recepción'),
+    medicoOrigen: o.medico || '',
+    fecha:fechaHoy(),
     hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
-    notas:o.notas, cobradoPor: (typeof sessionUser!=='undefined'?sessionUser?.nombre:'recepcion')
+    notas:o.notas
   };
   const fin = finGet(); fin.push(reg); finSave(fin);
   // Marcar orden como cobrada
@@ -19359,13 +19855,14 @@ function finEjecutarOrden(id){
   finOrdenesSave(ordenes);
   finActualizarBadgePendientes();
   finRenderPendientes();
-  toast(`✅ Cobro ejecutado — ${o.paciente} · $${o.total.toFixed(2)} · ${formaPago}`);
+  auditLog('✅ Cobro ejecutado', `${o.paciente} · $${o.total.toFixed(2)} · ${formaPago}`);toast(`✅ Cobro ejecutado — ${o.paciente} · $${o.total.toFixed(2)} · ${formaPago}`);
   if(typeof logActividad==='function') logActividad(`✅ Cobro ejecutado: ${o.paciente} · $${o.total.toFixed(2)}`);
 }
 
 function finCancelarOrden(id){
   if(!confirm('¿Cancelar esta orden de cobro?')) return;
   const arr = finOrdenesGet().filter(o=>o.id!==id);
+  auditLog('🗑️ Orden de cobro cancelada', id);
   finOrdenesSave(arr);
   finActualizarBadgePendientes();
   finRenderPendientes();
@@ -19695,7 +20192,7 @@ function qpayEjecutar(modo){
         motivoDesc:'', total, formaPago:forma,
         medico:su?.nombre||su?.usuario||'',
         medicoId:su?.user||su?.usuario||'',
-        fecha:new Date().toISOString().slice(0,10),
+        fecha:fechaHoy(),
         hora:new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}),
         notas,
         creadoPor:su?.usuario||'',
@@ -19705,11 +20202,600 @@ function qpayEjecutar(modo){
       if(typeof finRenderStats==='function') finRenderStats();
     }
     qpayCerrarModal();
-    typeof toast==='function'&&toast(`✅ Cobro registrado — ${pac} · $${total.toFixed(2)}`);
+    if(typeof auditLog==='function') auditLog('💰 Cobro registrado', `${pac} · $${total.toFixed(2)}`);typeof toast==='function'&&toast(`✅ Cobro registrado — ${pac} · $${total.toFixed(2)}`);
     typeof logActividad==='function'&&logActividad(`💰 Cobro rápido: ${pac} · $${total.toFixed(2)}`);
   }
 }
 
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') qpayCerrarModal(); });
+</script>
+
+<!-- ══════════════════════════════════════════════════════════
+     MULTI-TENANCY COMPLETO POR CLÍNICA — MedBC Pro v2
+     ─────────────────────────────────────────────────────────
+     AISLAMIENTO TOTAL: usuarios, expedientes, citas,
+     finanzas, invitaciones, configuración, auditoría.
+     Mismo dispositivo → grupos 100% separados.
+══════════════════════════════════════════════════════════ -->
+<script>
+(function(){
+'use strict';
+
+// ════════════════════════════════════════════════════════════
+// 1. ÍNDICE GLOBAL DE CLÍNICAS
+//    Guardado en localStorage sin prefijo — es el directorio
+//    que permite saber qué clínicas existen en este dispositivo.
+//    Estructura: { grupoId: { nombre, adminUser, creado } }
+// ════════════════════════════════════════════════════════════
+const MT_INDEX_KEY  = '__medbc_clinicas__';   // directorio global
+const MT_ACTIVA_KEY = '__medbc_clinica_act__'; // última clínica usada
+
+function mtIndexGet(){
+  try{ return JSON.parse(localStorage.getItem(MT_INDEX_KEY)||'{}'); }catch{ return {}; }
+}
+function mtIndexSave(obj){ localStorage.setItem(MT_INDEX_KEY, JSON.stringify(obj)); }
+
+// grupoId activo en esta sesión (se fija al elegir clínica o al login)
+let _gid = null;
+
+// ════════════════════════════════════════════════════════════
+// 2. TODAS LAS CLAVES QUE SE PREFIJAN POR GRUPO
+//    Incluye usuarios, invitaciones, registro — TODO aislado.
+// ════════════════════════════════════════════════════════════
+const CLAVES_GRUPO = new Set([
+  // Auth & usuarios
+  'medbc_pro_usuarios',
+  'medbc_invites',
+  'medbc_pro_registro_done',
+  // Datos clínicos
+  'expedientes',
+  'medbc_pro_citas',
+  'medbc_finanzas',
+  'medbc_ordenes_cobro',
+  'medbc_conceptos_cobro',
+  // Logs y auditoría
+  'actLog',
+  // 'auditoria' — NO prefijada: compartida entre todos los usuarios para que admin vea todo
+  'respaldoHistorial',
+  'medbc_iadx_hist',
+  'medbc_pro_upd_hist',
+  'medbc_pro_last_upd_check',
+  // Configuración de colores médicos, etc.
+  'medOverrides',
+  'medbc_pro_hcp_preguntas',
+]);
+
+// ════════════════════════════════════════════════════════════
+// 3. INTERCEPCCIÓN DE LS Y localStorage
+//    Todas las lecturas/escrituras de claves de grupo
+//    pasan automáticamente por el prefijo del grupo activo.
+// ════════════════════════════════════════════════════════════
+function _k(key){ const gid = _gid || window._mtGid || null; return (gid && CLAVES_GRUPO.has(key)) ? key+'__'+gid : key; }
+
+// Parchear objeto LS (IndexedDB + cache)
+const _LSg = LS.get.bind(LS);
+const _LSs = LS.set.bind(LS);
+const _LSd = LS.del.bind(LS);
+LS.get = (k,d) => _LSg(_k(k), d);
+LS.set = (k,v) => _LSs(_k(k), v);
+LS.del = (k)   => _LSd(_k(k));
+
+// Parchear localStorage nativo (citas y REG_KEY lo usan directamente)
+const _lgi = localStorage.getItem.bind(localStorage);
+const _lsi = localStorage.setItem.bind(localStorage);
+const _lri = localStorage.removeItem.bind(localStorage);
+localStorage.getItem    = k      => _lgi(CLAVES_GRUPO.has(k) ? _k(k) : k);
+localStorage.setItem    = (k,v)  => _lsi(CLAVES_GRUPO.has(k) ? _k(k) : k, v);
+localStorage.removeItem = k      => _lri(CLAVES_GRUPO.has(k) ? _k(k) : k);
+
+// ════════════════════════════════════════════════════════════
+// 4. ACTIVAR / DESACTIVAR GRUPO
+// ════════════════════════════════════════════════════════════
+window.mtActivarGrupo = function(gid){
+  _gid = gid;
+  window._mtGid = gid; // exponer globalmente para auditLog
+  localStorage.setItem(MT_ACTIVA_KEY, gid);           // sin prefijo — global
+  CLAVES_GRUPO.forEach(k => { delete _lsCache[k]; }); // limpiar caché vieja
+  console.log('🏥 Clínica activa:', gid);
+  // 🔐 NOM-004: activar cifrado del grupo
+  if(typeof cryptoActivarGrupo === 'function') cryptoActivarGrupo(gid).catch(()=>{});
+};
+
+window.mtDesactivarGrupo = function(){
+  CLAVES_GRUPO.forEach(k => { delete _lsCache[k]; });
+  _gid = null;
+  window._mtGid = null;
+  if(typeof cryptoCerrarSesion === 'function') cryptoCerrarSesion(); // 🔐 limpiar clave
+};
+
+// Recargar datos en memoria después de activar grupo
+window.mtWarmGrupo = async function(){
+  const claves = [...CLAVES_GRUPO].map(k => _k(k));
+  for(const k of claves){
+    try{
+      delete _lsCache[k];
+      const v = await idbGet(k);
+      if(v != null){ _lsCache[k] = v; try{ localStorage.setItem(k, JSON.stringify(v)); }catch{} }
+    }catch{}
+  }
+  try{ expedientes = LS.get('expedientes', []); }catch{}
+  try{
+    const rc = _lgi(_k('medbc_pro_citas'));  // leer directo sin doble prefijo
+    if(typeof citas !== 'undefined') citas = rc ? JSON.parse(rc) : [];
+  }catch{}
+  console.log('📦 Datos del grupo cargados:', _gid,
+    '| expedientes:', (()=>{try{return expedientes.length;}catch{return '?';}})());
+};
+
+// ════════════════════════════════════════════════════════════
+// 5. PANTALLA DE SELECCIÓN DE CLÍNICA
+//    Se muestra ANTES del login cuando hay más de una clínica.
+//    El usuario elige su clínica y luego hace login normal.
+// ════════════════════════════════════════════════════════════
+function mtCrearPantallaSelector(){
+  if(document.getElementById('mt-selector-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'mt-selector-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:var(--bg,#0D1117);z-index:19999;
+    display:flex;align-items:center;justify-content:center;padding:20px;
+    font-family:'DM Sans',sans-serif;
+  `;
+
+  overlay.innerHTML = `
+    <div style="background:var(--sf,#161B22);border:1px solid var(--bd,#30363D);
+      border-radius:24px;padding:36px 32px;width:100%;max-width:480px;
+      box-shadow:0 24px 80px rgba(0,0,0,.7);animation:mtIn .25s ease">
+      <style>
+        @keyframes mtIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+        .mt-clinic-btn{
+          display:flex;align-items:center;gap:14px;width:100%;
+          background:var(--card,#1C2333);border:1px solid var(--bd,#30363D);
+          border-radius:14px;padding:16px 18px;cursor:pointer;text-align:left;
+          font-family:inherit;color:var(--tx,#E6EDF3);transition:all .15s;margin-bottom:10px;
+        }
+        .mt-clinic-btn:hover{border-color:var(--ac,#2EA8E0);background:rgba(46,168,224,.06);transform:translateY(-1px)}
+        .mt-clinic-icon{width:44px;height:44px;border-radius:12px;background:rgba(46,168,224,.15);
+          display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+        .mt-clinic-name{font-size:15px;font-weight:800;color:var(--tx,#E6EDF3)}
+        .mt-clinic-sub{font-size:11px;color:var(--so,#8B949E);margin-top:2px}
+        .mt-new-btn{
+          display:flex;align-items:center;gap:10px;width:100%;
+          background:transparent;border:1px dashed var(--bd,#30363D);
+          border-radius:12px;padding:13px 16px;cursor:pointer;font-family:inherit;
+          color:var(--so,#8B949E);font-size:13px;font-weight:600;transition:all .15s;margin-top:4px;
+        }
+        .mt-new-btn:hover{border-color:var(--ac2,#3FB68B);color:var(--ac2,#3FB68B)}
+      </style>
+
+      <div style="text-align:center;margin-bottom:28px">
+        <div style="font-size:44px;margin-bottom:10px">🏥</div>
+        <div style="font-size:22px;font-weight:800;color:var(--tx,#E6EDF3)">MedBC Pro</div>
+        <div style="font-size:13px;color:var(--so,#8B949E);margin-top:6px">
+          ¿A qué clínica deseas ingresar?
+        </div>
+      </div>
+
+      <div id="mt-lista-clinicas" style="max-height:340px;overflow-y:auto"></div>
+
+      <button class="mt-new-btn" onclick="mtNuevaClinica()">
+        <span style="font-size:18px">➕</span>
+        Registrar nueva clínica en este dispositivo
+      </button>
+
+      <div style="margin-top:18px;padding:10px 12px;background:rgba(46,168,224,.05);
+        border:1px solid rgba(46,168,224,.15);border-radius:10px;
+        font-size:11px;color:var(--so,#8B949E);line-height:1.7">
+        🔒 Cada clínica tiene sus <strong>propios usuarios, expedientes y datos</strong>.
+        Completamente aislados entre sí en este dispositivo.
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  mtRenderListaClinicas();
+}
+
+function mtRenderListaClinicas(){
+  const el = document.getElementById('mt-lista-clinicas');
+  if(!el) return;
+  const index = mtIndexGet();
+  const clinicas = Object.entries(index);
+
+  if(!clinicas.length){
+    // Primera vez — no hay clínicas, ir directo a registro
+    mtNuevaClinica();
+    return;
+  }
+
+  el.innerHTML = clinicas.map(([gid, info]) => `
+    <button class="mt-clinic-btn" onclick="mtElegirClinica('${gid}')">
+      <div class="mt-clinic-icon">🏥</div>
+      <div style="flex:1;min-width:0">
+        <div class="mt-clinic-name">${_htmlEsc(info.nombre||'Clínica')}</div>
+        <div class="mt-clinic-sub">
+          Admin: ${_htmlEsc(info.adminUser||'—')} &nbsp;·&nbsp;
+          Creada: ${info.creado ? new Date(info.creado).toLocaleDateString('es-MX') : '—'}
+        </div>
+      </div>
+      <span style="font-size:18px;color:var(--so,#8B949E)">›</span>
+    </button>
+  `).join('');
+}
+
+function _htmlEsc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// El usuario eligió una clínica → activar y mostrar login normal
+window.mtElegirClinica = function(gid){
+  mtActivarGrupo(gid);
+  // Ocultar selector
+  const ov = document.getElementById('mt-selector-overlay');
+  if(ov) ov.style.display = 'none';
+  // Mostrar login
+  const ls = document.getElementById('login-screen');
+  if(ls) ls.style.display = 'flex';
+  // Precargar nombre de sesión guardada
+  try{ loginMostrarSesionGuardada(); }catch{}
+  setTimeout(()=>{ try{ document.getElementById('login-user').focus(); }catch{} }, 100);
+};
+
+// Crear nueva clínica → ir directo a registro como admin
+window.mtNuevaClinica = function(){
+  // Generar nuevo gid provisional; se confirma al terminar registro
+  const gid = 'g' + Date.now() + Math.random().toString(36).slice(2,9);
+  mtActivarGrupo(gid);
+  // Marcar que este grupo es nuevo → regFinalizar sabrá que es admin
+  sessionStorage.setItem('__mt_nuevo_grupo__', '1');
+  // Ocultar selector
+  const ov = document.getElementById('mt-selector-overlay');
+  if(ov) ov.style.display = 'none';
+  // Ir a registro
+  const ls = document.getElementById('login-screen');
+  if(ls) ls.style.display = 'flex';
+  setTimeout(()=>authTab('registro'), 80);
+};
+
+// ════════════════════════════════════════════════════════════
+// 6. PARCHEAR regVerificar PARA USAR EL SELECTOR
+//    Ya no muestra el formulario de registro directamente;
+//    primero pasa por el selector de clínica.
+// ════════════════════════════════════════════════════════════
+const _regVerificarOrig = window.regVerificar;
+window.regVerificar = function(){
+  // Limpiar sesión siempre
+  try{ LS.del(SESSION_KEY); }catch{}
+  sessionUser = null;
+
+  const index = mtIndexGet();
+  const hayClincias = Object.keys(index).length > 0;
+
+  if(hayClincias){
+    // Siempre mostrar login directo — la contraseña detecta la clínica automáticamente
+    const ov = document.getElementById('mt-selector-overlay');
+    if(ov) ov.remove();
+    const ls = document.getElementById('login-screen');
+    if(ls) ls.style.display = 'flex';
+    return false; // NO es primera vez — permite que checkSession() siga su flujo
+  } else {
+    // ── MIGRACIÓN: verificar si ya existen usuarios del sistema anterior ──
+    // Buscar usuarios en localStorage sin prefijo de grupo (instalación previa)
+    let usuariosExistentes = null;
+    try{
+      const raw = _lgi('medbc_pro_usuarios'); // leer directo sin prefijo de grupo
+      if(raw) usuariosExistentes = JSON.parse(raw);
+    }catch{}
+    const regDone = _lgi('medbc_pro_registro_done');
+
+    if((usuariosExistentes && usuariosExistentes.length > 0) || regDone){
+      // Ya hay datos — migrar automáticamente a una clínica
+      const gid = 'g_migrado_' + Date.now();
+      mtActivarGrupo(gid);
+      const admin = (usuariosExistentes||[]).find(u=>u.rol==='admin');
+      index[gid] = {
+        nombre    : admin && admin.nombre ? 'Clinica de ' + admin.nombre : 'Mi Clinica',
+        adminUser : admin ? admin.user : 'admin',
+        creado    : new Date().toISOString(),
+        migrado   : true
+      };
+      mtIndexSave(index);
+      console.log('Migracion automatica: clinica creada para datos existentes', gid);
+      // Copiar todos los datos existentes (sin prefijo) a las claves del nuevo grupo
+      const clavesMigrar = [
+        'medbc_pro_usuarios','medbc_invites','medbc_pro_registro_done',
+        'expedientes','medbc_pro_citas','medbc_finanzas','medbc_ordenes_cobro',
+        'medbc_conceptos_cobro','actLog','auditoria'
+      ];
+      clavesMigrar.forEach(k => {
+        try{
+          const val = _lgi(k); // leer clave original sin prefijo
+          if(val != null) _lsi(k + '__' + gid, val); // copiar con prefijo del grupo
+        }catch{}
+      });
+      // Recargar expedientes con el prefijo del grupo migrado
+      try{ expedientes = LS.get('expedientes', []); }catch{}
+      try{ auditoria   = LS.get('auditoria',   []); }catch{}
+      // Mostrar login normal (no registro)
+      const ls = document.getElementById('login-screen');
+      if(ls) ls.style.display = 'flex';
+      return false; // hay datos, no es primera vez
+    }
+
+    // Primera vez absoluta → nueva clinica
+    mtNuevaClinica();
+    return true;
+  }
+};
+
+// ════════════════════════════════════════════════════════════
+// 7. PARCHEAR regFinalizar PARA REGISTRAR LA CLÍNICA EN EL ÍNDICE
+// ════════════════════════════════════════════════════════════
+const _regFinalizarOrig = window.regFinalizar;
+window.regFinalizar = async function(){
+  await _regFinalizarOrig();
+  // Si llegamos aquí sin error, el admin fue creado
+  try{
+    const usuarios = getUsuarios();
+    const admin = usuarios.find(u => u.rol === 'admin');
+    if(admin && _gid){
+      const index = mtIndexGet();
+      if(!index[_gid]){
+        // Nombre de clínica: tomar del campo reg-clinica si tiene valor
+        const clinicaInput = document.getElementById('reg-clinica');
+        const nombre = (clinicaInput?.value?.trim()) ||
+                       (admin.nombre ? 'Clínica de ' + admin.nombre : 'Clínica') ;
+        index[_gid] = {
+          nombre,
+          adminUser : admin.user,
+          creado    : new Date().toISOString()
+        };
+        mtIndexSave(index);
+        console.log('🏥 Clínica registrada en índice:', _gid, nombre);
+      }
+    }
+  }catch(e){ console.error('mtRegFinalizar error:', e); }
+};
+
+// ════════════════════════════════════════════════════════════
+// 8. PARCHEAR addUsuario PARA GUARDAR grupoAdmin EN EL NUEVO USUARIO
+// ════════════════════════════════════════════════════════════
+const _addUsuarioOrig = window.addUsuario;
+window.addUsuario = async function(){
+  if(typeof _addUsuarioOrig === 'function') await _addUsuarioOrig();
+  try{
+    const usuarios = getUsuarios();
+    const adminUser = sessionUser?.user || usuarios.find(u => u.rol==='admin')?.user;
+    if(adminUser){
+      let changed = false;
+      usuarios.forEach(u => { if(u.rol !== 'admin' && !u.grupoAdmin){ u.grupoAdmin = adminUser; changed = true; } });
+      if(changed) saveUsuarios(usuarios);
+    }
+  }catch(e){}
+};
+
+// ════════════════════════════════════════════════════════════
+// 9. PARCHEAR doLogin Y loginContinuar
+//    Activar grupo inmediatamente después de autenticar.
+// ════════════════════════════════════════════════════════════
+function _postLogin(){
+  if(!sessionUser) return;
+  // Si por alguna razón no hay gid, intentar derivarlo del admin
+  if(!_gid){
+    try{
+      const todos = getUsuarios();
+      let adminUser;
+      if(sessionUser.rol === 'admin') adminUser = sessionUser.user;
+      else adminUser = sessionUser.grupoAdmin || todos.find(u=>u.rol==='admin')?.user;
+      if(adminUser){
+        const index = mtIndexGet();
+        const entry = Object.entries(index).find(([,v]) => v.adminUser === adminUser);
+        if(entry) mtActivarGrupo(entry[0]);
+      }
+    }catch(e){}
+  }
+  // Limpiar inmediatamente para evitar mostrar datos del grupo anterior
+  expedientes = [];
+  // auditoria NO se limpia — es compartida entre usuarios (sin prefijo de grupo)
+  try{ if(typeof citas !== 'undefined') citas = []; }catch{}
+  try{ if(typeof bloqueos !== 'undefined') bloqueos = []; }catch{}
+  try{ if(typeof respaldoHistorial !== 'undefined') respaldoHistorial = []; }catch{}
+  if(typeof initDash === 'function') initDash(); // mostrar 0s correctos de inmediato
+  if(typeof renderExpLista === 'function') renderExpLista();
+  // Luego cargar los datos reales del grupo
+  mtWarmGrupo().then(()=>{
+    // Recargar TODAS las variables globales con los datos del grupo activo
+    try{ expedientes       = LS.get('expedientes', []); }catch{}
+    // Leer auditoria directo de IDB con clave prefijada para evitar problemas de caché
+    try{ auditoria = LS.get('auditoria', []); }catch{}
+    if(typeof renderAuditoria === 'function') renderAuditoria();
+    try{ citas             = JSON.parse(localStorage.getItem('medbc_pro_citas')||'[]'); }catch{}
+    try{ bloqueos          = JSON.parse(localStorage.getItem('medbc_pro_bloqueos')||'[]'); }catch{}
+    try{ respaldoHistorial = LS.get('respaldoHistorial', []); }catch{}
+    try{ iaDxHistorial     = JSON.parse(localStorage.getItem('medbc_pro_iadx_hist')||'[]'); }catch{}
+    if(typeof renderAll === 'function') renderAll();
+    if(typeof renderExpLista === 'function') renderExpLista();
+    if(typeof initDash === 'function') initDash();
+  });
+}
+
+// Auto-detectar consultorio al hacer login: busca en qué grupo existe el usuario
+function mtBuscarGrupoDeUsuario(username, passHash, passRaw){
+  const index = mtIndexGet();
+  for(const gid of Object.keys(index)){
+    try{
+      // Leer usuarios de este grupo — primero cache (IndexedDB), luego localStorage
+      let usuarios = null;
+      const cacheKey = 'medbc_pro_usuarios__' + gid;
+      if(_lsCache[cacheKey] !== undefined){
+        usuarios = _lsCache[cacheKey];
+      } else {
+        try{ const raw = _lgi(cacheKey); if(raw) usuarios = JSON.parse(raw); }catch{}
+      }
+      if(!usuarios || !usuarios.length) continue;
+      const found = usuarios.find(u => u.user === username && (
+        passHash === '' ? true : // búsqueda solo por usuario (loginContinuar)
+        u.pass === passHash || (!isSha256(u.pass) && u.pass === btoa(passRaw))
+      ));
+      if(found) return gid;
+    }catch(e){}
+  }
+  return null;
+}
+
+const _doLoginOrig = window.doLogin;
+window.doLogin = function(){
+  // Detectar grupo antes del login
+  const username = (document.getElementById('login-user')?.value||'').trim();
+  const passRaw  = document.getElementById('login-pass')?.value||'';
+  sha256(passRaw).then(passHash => {
+    const gid = mtBuscarGrupoDeUsuario(username, passHash, passRaw);
+    if(gid && gid !== _gid){
+      mtActivarGrupo(gid);
+      console.log('🏥 Consultorio detectado automáticamente:', gid, mtIndexGet()[gid]?.nombre);
+    }
+    const origUI = window.updateSessionUI;
+    window.updateSessionUI = function(){
+      _postLogin();
+      window.updateSessionUI = origUI;
+      origUI();
+    };
+    _doLoginOrig();
+  });
+};
+
+const _loginContinuarOrig = window.loginContinuar;
+window.loginContinuar = function(){
+  // loginContinuar usa sesión guardada — detectar grupo por el usuario en sesión
+  try{
+    const sesionRaw = _lgi('medbc_pro_session');
+    if(sesionRaw){
+      const sesion = JSON.parse(sesionRaw);
+      if(sesion && sesion.user){
+        const gid = mtBuscarGrupoDeUsuario(sesion.user, '', '');
+        if(gid && gid !== _gid) mtActivarGrupo(gid);
+      }
+    }
+  }catch(e){}
+  const origUI = window.updateSessionUI;
+  window.updateSessionUI = function(){
+    _postLogin();
+    window.updateSessionUI = origUI;
+    origUI();
+  };
+  _loginContinuarOrig();
+};
+
+// ════════════════════════════════════════════════════════════
+// 10. PARCHEAR logout — VOLVER AL SELECTOR DE CLÍNICA
+// ════════════════════════════════════════════════════════════
+const _confirmarLogoutOrig = window._confirmarLogout;
+window._confirmarLogout = function(){
+  // IMPORTANTE: primero guardar el log de cierre (necesita _gid activo),
+  // luego desactivar el grupo para no corromper la clave de auditoria.
+  _confirmarLogoutOrig();
+  mtDesactivarGrupo();
+  // Después del logout → siempre mostrar login directo (la contraseña detecta el consultorio)
+  setTimeout(()=>{
+    const ov = document.getElementById('mt-selector-overlay');
+    if(ov) ov.remove();
+    const ls = document.getElementById('login-screen');
+    if(ls) ls.style.display = 'flex';
+  }, 150);
+};
+
+// ════════════════════════════════════════════════════════════
+// 11. PANEL DE INFO DE CLÍNICA EN EL MODAL DE USUARIOS
+// ════════════════════════════════════════════════════════════
+const _openUsrModalOrig = window.openUsrModal;
+window.openUsrModal = function(){
+  _openUsrModalOrig();
+  setTimeout(()=>{
+    const box = document.getElementById('usr-box');
+    if(!box || document.getElementById('mt-grupo-info')) return;
+
+    const index  = mtIndexGet();
+    const info   = _gid ? (index[_gid] || {}) : {};
+    const numExp = (()=>{ try{ return LS.get('expedientes',[]).length; }catch{ return 0; } })();
+    const numUsr = (()=>{ try{ return getUsuarios().length; }catch{ return 0; } })();
+
+    const panel = document.createElement('div');
+    panel.id = 'mt-grupo-info';
+    panel.className = 'card';
+    panel.style.marginTop = '14px';
+    panel.innerHTML = `
+      <div class="ct">🏥 Esta Clínica / Grupo</div>
+      <div style="font-size:12px;color:var(--so);margin-bottom:12px">
+        Todos los usuarios de este grupo comparten expedientes, citas y finanzas.
+        Completamente aislados de otras clínicas en este dispositivo.
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:14px">
+        <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px">
+          <div style="font-size:10px;font-weight:700;color:var(--so);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Nombre de clínica</div>
+          <div style="font-size:13px;font-weight:700;color:var(--tx)">${_htmlEsc(info.nombre||'—')}</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px">
+          <div style="font-size:10px;font-weight:700;color:var(--so);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Usuarios</div>
+          <div style="font-size:22px;font-weight:800;color:var(--ac2)">${numUsr}</div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px">
+          <div style="font-size:10px;font-weight:700;color:var(--so);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Expedientes</div>
+          <div style="font-size:22px;font-weight:800;color:var(--ac)">${numExp}</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:var(--so);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Nombre de clínica</div>
+        <div style="display:flex;gap:8px">
+          <input id="mt-clinica-nombre" class="inp" value="${_htmlEsc(info.nombre||'')}" placeholder="Ej: Clínica Santa María" style="flex:1">
+          <button class="pill pg2" onclick="mtGuardarNombreClinica()">💾 Guardar</button>
+        </div>
+      </div>
+
+      <div style="background:rgba(63,182,139,.07);border:1px solid rgba(63,182,139,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--so)">
+        🔒 <strong>Aislamiento total activo.</strong>
+        Otras clínicas en este dispositivo no pueden ver ningún dato de este grupo.
+      </div>
+    `;
+    box.appendChild(panel);
+  }, 100);
+};
+
+window.mtGuardarNombreClinica = function(){
+  const nombre = document.getElementById('mt-clinica-nombre')?.value?.trim();
+  if(!nombre){ if(typeof toast==='function') toast('Escribe el nombre de la clínica','err'); return; }
+  const index = mtIndexGet();
+  if(index[_gid]){
+    index[_gid].nombre = nombre;
+    mtIndexSave(index);
+    if(typeof toast==='function') toast('✅ Nombre de clínica actualizado');
+  }
+};
+
+// ════════════════════════════════════════════════════════════
+// 12. BADGE EN renderUsrList — aviso visual de compartición
+// ════════════════════════════════════════════════════════════
+const _renderUsrListOrig = window.renderUsrList;
+window.renderUsrList = function(){
+  _renderUsrListOrig();
+  try{
+    const el = document.getElementById('usr-list');
+    if(!el || el.querySelector('.mt-shared-badge')) return;
+    const badge = document.createElement('div');
+    badge.className = 'mt-shared-badge';
+    badge.style.cssText = 'margin-bottom:10px;padding:8px 11px;background:rgba(46,168,224,.07);border:1px solid rgba(46,168,224,.2);border-radius:8px;font-size:11px;color:var(--ac);display:flex;align-items:center;gap:8px';
+    badge.innerHTML = '<span style="font-size:14px">👥</span> Todos estos usuarios <strong>comparten expedientes, citas y finanzas</strong> de esta clínica.';
+    el.insertBefore(badge, el.firstChild);
+  }catch(e){}
+};
+
+// ════════════════════════════════════════════════════════════
+// 13. ARRANQUE — al cargar la página mostrar selector
+// ════════════════════════════════════════════════════════════
+// Reemplazar el arranque original (que llama regVerificar)
+// El regVerificar parchado ya maneja el flujo completo.
+console.log('✅ Multi-tenancy v2 cargado — MedBC Pro');
+console.log('   Clínicas en este dispositivo:', Object.keys(mtIndexGet()).length);
+
+})();
 </script>
 </body>
