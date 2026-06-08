@@ -864,6 +864,24 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
 
 <!-- ══════════════ PANTALLA UNIFICADA LOGIN + REGISTRO ══════════════ -->
 <div id="login-screen">
+
+<!-- ── Ícono configuración Supabase ── -->
+<div id="supabase-config-btn" onclick="abrirConfigSupabase()" style="position:fixed;bottom:20px;right:20px;width:36px;height:36px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:9999;font-size:16px;transition:all .2s" title="Configurar Supabase">⚙️</div>
+
+<!-- ── Modal configuración Supabase ── -->
+<div id="supabase-config-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;align-items:center;justify-content:center">
+  <div style="background:var(--sf);border:1px solid var(--bd);border-radius:16px;padding:24px;width:90%;max-width:400px">
+    <div style="font-size:16px;font-weight:700;color:var(--tx);margin-bottom:16px">⚙️ Configurar Supabase</div>
+    <div style="font-size:12px;color:var(--so);margin-bottom:8px">URL de Supabase</div>
+    <input id="sb-url-input" class="inp" placeholder="https://xxxx.supabase.co" style="width:100%;margin-bottom:12px">
+    <div style="font-size:12px;color:var(--so);margin-bottom:8px">Anon Key</div>
+    <input id="sb-key-input" class="inp" placeholder="eyJ..." style="width:100%;margin-bottom:16px">
+    <div style="display:flex;gap:8px">
+      <button class="pill pn" style="flex:1" onclick="cerrarConfigSupabase()">Cancelar</button>
+      <button class="pill pg2" style="flex:1" onclick="guardarConfigSupabase()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
   <div id="auth-container">
 
     <!-- Panel izquierdo — Hero -->
@@ -1052,6 +1070,7 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
         <select class="inp" id="reg-tipo" onchange="regTipoCambio()">
           <option value="admin">🏥 Administrador — Nueva clínica independiente</option>
           <option value="medico">👨‍⚕️ Médico — Unirme a una clínica existente (requiere código)</option>
+          <option value="recepcion">🧾 Recepcionista — Unirme a una clínica existente (requiere código)</option>
         </select>
 
         <label class="lbl">Teléfono</label>
@@ -1166,10 +1185,17 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
     </div>
 
     <div class="card" style="margin-top:14px">
-      <div class="ct">🎟️ Códigos de invitación</div>
+      <div class="ct">🎟️ Códigos de invitación — Médico</div>
       <p style="font-size:12px;color:var(--so);margin-bottom:12px">Genera un código de un solo uso para que un médico pueda registrarse.</p>
       <button class="pill pg2" onclick="generarCodigoInvite()">✨ Generar nuevo código</button>
       <div id="invite-list" style="margin-top:12px"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="ct">🎟️ Códigos de invitación — Recepción</div>
+      <p style="font-size:12px;color:var(--so);margin-bottom:12px">Genera un código de un solo uso para que una recepcionista pueda registrarse.</p>
+      <button class="pill pg2" onclick="generarCodigoInviteRecepcion()">✨ Generar nuevo código</button>
+      <div id="invite-list-recepcion" style="margin-top:12px"></div>
     </div>
 
     <div class="card" style="margin-top:14px">
@@ -1580,6 +1606,20 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
           <button class="pill pg2" onclick="expGuardarNota()">💾 Guardar nota</button>
           <button class="pill pn" onclick="clearForm(['nev-s','nev-o','nev-a','nev-p'])">🗑️ Limpiar</button>
         </div>
+        <!-- IA: Estructurar nota SOAP -->
+        <div style="background:rgba(46,168,224,.06);border:1px solid rgba(46,168,224,.2);border-radius:10px;padding:12px;margin-top:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">✨ Asistente IA — Completar nota SOAP</div>
+          <div style="font-size:12px;color:var(--so);margin-bottom:8px">Escribe un resumen libre y la IA llenará automáticamente los campos S, O, A y P.</div>
+          <div style="position:relative">
+            <textarea class="inp" id="nev-ia-borrador" rows="3" placeholder="Ej: paciente con dm2 en control, viene a revisión, glucosa 142, ajuste metformina a 850mg cada 12h, próxima cita en 1 mes..." style="padding-right:40px"></textarea>
+            <button onclick="voiceDictar('nev-ia-borrador',this)" title="Dictado por voz" style="position:absolute;right:8px;top:8px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--so);padding:2px">🎤</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center">
+            <button class="pill pb" onclick="nevEstructurarIA()" id="nev-ia-btn">✨ Llenar campos SOAP con IA</button>
+            <button class="pill pn" onclick="document.getElementById('nev-ia-borrador').value=''" style="font-size:11px">🗑️ Limpiar</button>
+            <span id="nev-ia-loading" style="display:none;font-size:12px;color:var(--so)">⏳ Generando...</span>
+          </div>
+        </div>
       </div>
       <div class="card" style="margin-top:8px">
         <div class="ct">📋 Historial de Notas</div>
@@ -1727,7 +1767,22 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
               <option>Control crónico</option><option>Revisión post-operatoria</option><option>Teleconsulta</option>
             </select></div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <!-- IA: Estructurar nota -->
+        <div style="background:rgba(46,168,224,.06);border:1px solid rgba(46,168,224,.2);border-radius:10px;padding:12px;margin-top:4px">
+          <div style="font-size:11px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">✨ Asistente IA — Estructurar nota clínica</div>
+          <div style="font-size:12px;color:var(--so);margin-bottom:8px">Escribe o dicta un resumen libre de la consulta y la IA lo convierte en nota clínica estructurada.</div>
+          <div style="position:relative">
+            <textarea class="inp" id="nc-ia-borrador" rows="3" placeholder="Ej: paciente 45 años hta, viene por tos 3 dias fiebre 38.2, rx normal, dx faringitis viral, amoxicilina 500 cada 8h por 7 dias..." style="padding-right:40px"></textarea>
+            <button onclick="voiceDictar('nc-ia-borrador',this)" title="Dictado por voz" style="position:absolute;right:8px;top:8px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--so);padding:2px">🎤</button>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center">
+            <button class="pill pb" onclick="ncEstructurarIA()" id="nc-ia-btn">✨ Estructurar con IA</button>
+            <button class="pill pn" onclick="document.getElementById('nc-ia-borrador').value='';document.getElementById('nc-ia-resultado').style.display='none'" style="font-size:11px">🗑️ Limpiar</button>
+            <span id="nc-ia-loading" style="display:none;font-size:12px;color:var(--so)">⏳ Generando nota...</span>
+          </div>
+          <div id="nc-ia-resultado" style="display:none;margin-top:10px;background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:13px;line-height:1.7"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
           <button class="pill pg2" onclick="expGuardarConsulta()">💾 Guardar consulta</button>
           <button class="pill pb" onclick="expConsultaAHC()">📋 Enviar a Historia Clínica</button>
           <button class="pill pn" onclick="expLimpiarConsulta()">🗑️ Limpiar</button>
@@ -2423,7 +2478,8 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
   ══════════════════════════════════════════ -->
 
   <!-- ── MEDICINA GENERAL ── -->
-  <div class="hc-sec hc-general">
+  <!-- Antecedentes siempre visibles para todas las especialidades -->
+  <div id="hc-antecedentes-fijos">
     <div class="card"><div class="ct">📋 Antecedentes Heredofamiliares</div>
       <div class="fr">
         <div class="fg"><label class="lbl">Diabetes mellitus</label><select class="inp" id="hc-ahf-dm"><option value="">--</option><option>Padre</option><option>Madre</option><option>Ambos</option><option>Abuelos</option><option>Ninguno</option></select></div>
@@ -2455,7 +2511,9 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
         <div class="fg" style="grid-column:span 2"><label class="lbl">Vacunación</label><input class="inp" id="hc-app-vacunas" placeholder="Esquema completo, pendientes..."></div>
       </div>
     </div>
+  </div><!-- /hc-antecedentes-fijos -->
 
+  <div class="hc-sec hc-general">
     <!-- ══════════ BLOQUE MUJER (aparece automáticamente si Sexo = Femenino) ══════════ -->
     <div id="hcg-bloque-mujer" style="display:none">
       <div style="display:flex;align-items:center;gap:8px;margin:4px 0 10px;padding:8px 14px;background:rgba(233,30,99,.07);border:1px solid rgba(233,30,99,.25);border-radius:10px">
@@ -3081,6 +3139,20 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
       <button class="pill pb" onclick="dlHC()">⬇ Descargar</button>
       <button class="pill pb" onclick="printHC()">🖨️ Imprimir</button>
       <button class="pill pn" onclick="hcLimpiarTodo()">🗑️ Limpiar</button>
+    </div>
+    <!-- IA: Estructurar Historia Clínica -->
+    <div style="background:rgba(46,168,224,.06);border:1px solid rgba(46,168,224,.2);border-radius:10px;padding:12px;margin-top:12px">
+      <div style="font-size:11px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">✨ Asistente IA — Completar Historia Clínica</div>
+      <div style="font-size:12px;color:var(--so);margin-bottom:8px">Describe el caso en lenguaje libre y la IA llenará los campos de motivo, anamnesis, exploración y plan.</div>
+      <div style="position:relative">
+        <textarea class="inp" id="hc-ia-borrador" rows="4" placeholder="Ej: mujer 32 años sin antecedentes, viene por dolor abdominal en fosa ilíaca derecha 2 días, náusea, temperatura 37.8, abdomen blando con rebote leve en mcburney, leucocitos 12000, impresión apendicitis aguda, se refiere a urgencias..." style="padding-right:40px"></textarea>
+        <button onclick="voiceDictar('hc-ia-borrador',this)" title="Dictado por voz" style="position:absolute;right:8px;top:8px;background:none;border:none;font-size:16px;cursor:pointer;color:var(--so);padding:2px">🎤</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center">
+        <button class="pill pb" onclick="hcEstructurarIA()" id="hc-ia-btn">✨ Completar HC con IA</button>
+        <button class="pill pn" onclick="document.getElementById('hc-ia-borrador').value=''" style="font-size:11px">🗑️ Limpiar</button>
+        <span id="hc-ia-loading" style="display:none;font-size:12px;color:var(--so)">⏳ Generando...</span>
+      </div>
     </div>
   </div>
 
@@ -5285,7 +5357,7 @@ function toggleDxClin(inpId, listId) {
           <div class="sname">🤖 Funciones de Inteligencia Artificial</div>
           <div class="sdesc">Activa o desactiva el módulo IA Diagnóstico y el análisis de imágenes con IA. Desactívalo si usas MedBC Pro como archivo local (.html) — la IA requiere servidor web para funcionar (CORS).</div>
         </div>
-        <label class="tog"><input type="checkbox" id="cfg-ia" checked onchange="toggleIA(this.checked);autoSaveCfg()"><span class="togsl"></span></label>
+        <label class="tog"><input type="checkbox" id="cfg-ia" onchange="toggleIA(this.checked);autoSaveCfg()"><span class="togsl"></span></label>
       </div>
       <div class="sr" style="flex-direction:column;align-items:flex-start;gap:8px">
         <div><div class="sname">🔑 API Key de Anthropic (para módulo IA)</div>
@@ -5296,6 +5368,16 @@ function toggleDxClin(inpId, listId) {
           <button class="pill pn" onclick="probarAnthropicKey()">🔌 Probar</button>
         </div>
         <div id="anthropic-key-status" style="font-size:12px;color:var(--mu)"></div>
+      </div>
+      <div class="sr" style="flex-direction:column;align-items:flex-start;gap:8px">
+        <div><div class="sname">🔑 API Key de Gemini (Google AI — alternativa a Claude)</div>
+        <div class="sdesc">Usa Google Gemini como motor de IA en lugar de Claude. Obtén tu key gratis en <b>aistudio.google.com</b> → Get API key. Si ambas keys están guardadas, se usará <b>Claude primero</b>.</div></div>
+        <div style="display:flex;gap:8px;width:100%;flex-wrap:wrap">
+          <input class="inp" type="password" id="cfg-gemini-key" placeholder="AIzaSy..." style="flex:1;min-width:200px" autocomplete="off">
+          <button class="pill pg2" onclick="guardarGeminiKey()">💾 Guardar key</button>
+          <button class="pill pn" onclick="probarGeminiKey()">🔌 Probar</button>
+        </div>
+        <div id="gemini-key-status" style="font-size:12px;color:var(--mu)"></div>
       </div>
     </div>
     <div class="card"><div class="ct">📊 Estadísticas del Sistema</div>
@@ -6164,7 +6246,8 @@ const LS={
   },
   set:(k,v)=>{
     if(CRYPTO_KEYS.some(ck=>k.startsWith(ck)) && _cryptoKey){
-      cryptoCifrar(v, _cryptoKey).then(cifrado=>{
+      // FIX: retornar la Promise para que el caller pueda esperar con .then()
+      return cryptoCifrar(v, _cryptoKey).then(cifrado=>{
         _lsCache[k]=v;
         idbSet(k,cifrado).catch(()=>{});
         try{localStorage.setItem(k,cifrado);}catch(e){
@@ -6175,7 +6258,6 @@ const LS={
         idbSet(k,v).catch(()=>{});
         try{localStorage.setItem(k,JSON.stringify(v));}catch{}
       });
-      return;
     }
     _lsCache[k]=v;
     idbSet(k,v).catch(()=>{});
@@ -6184,6 +6266,7 @@ const LS={
         try{localStorage.removeItem(k);}catch{}
       }
     }
+    return Promise.resolve();
   },
   del:(k)=>{
     delete _lsCache[k];
@@ -6220,6 +6303,7 @@ let cLab=LS.get('cLab',[]);
 let cGab=LS.get('cGab',[]);
 let cfg=LS.get('cfg',{});
 if(cfg.autoLogout===undefined) cfg.autoLogout='15'; // valor por defecto: 15 minutos
+if(cfg.iaEnabled===undefined) cfg.iaEnabled=true;   // IA activa por defecto
 let navStack=[];
 let curPage='dashboard';
 let gpcCat=null,gpcEnf=null;
@@ -6423,6 +6507,7 @@ function showPage(page){
       if(espRegistrada.includes(k)){ espKey = v; break; }
     }
     setHCEsp(espKey, false);
+    filtrarTabsSegunRol();
     hcgActualizarBloques();
     // Cerrar panel de calculadoras al entrar a HC (evita que quede abierto de sesión anterior)
     const hcCalcsBody = document.getElementById('hc-calcs-body');
@@ -6587,7 +6672,7 @@ function dlHTML(fname,html){
 }
 function dlPDF(fname,html){
   imprimirDocumento(html);
-  toast('📄 En el diálogo de impresión selecciona "Guardar como PDF"');
+  
 }
 function dlJSON(fname,obj){
   const a=document.createElement('a');
@@ -6682,8 +6767,11 @@ function saveHC(){
 function hcGuardarEnExpediente(){
   const nom=document.getElementById('hc-nom')?.value?.trim();
   if(!nom){toast('Ingresa el nombre del paciente primero','err');return;}
+  _ensureExpArray();
+  const _btnHC=document.querySelector('button[onclick="hcGuardarEnExpediente()"]');
+  if(_btnHC){_btnHC.disabled=true;_btnHC.textContent='⏳ Guardando...';}
   // Buscar si ya existe
-  let p=expedientes.find(x=>x.nombre.toLowerCase()===nom.toLowerCase());
+  let p=expedientes.find(x=>x.nombre&&x.nombre.toLowerCase()===nom.toLowerCase());
   if(!p){
     const id='EXP-'+Date.now();
     const folio=generarFolio();
@@ -6698,7 +6786,7 @@ function hcGuardarEnExpediente(){
       fechaAlta:fechaHoy(),
       consultas:[],recetas:[],estudios:[],notas:''};
     expedientes.push(p);
-    toast('✅ Paciente nuevo registrado en Expediente: '+nom);
+    // toast diferido — se muestra tras guardar exitosamente
   } else {
     // Actualizar datos base
     p.curp=document.getElementById('hc-curp')?.value||p.curp;
@@ -6707,7 +6795,7 @@ function hcGuardarEnExpediente(){
     p.sangre=document.getElementById('hc-sangre')?.value||p.sangre;
     p.tel=document.getElementById('hc-tel')?.value||p.tel;
     p.email=document.getElementById('hc-email')?.value||p.email;
-    toast('✅ Expediente actualizado: '+nom);
+    // toast diferido — se muestra tras guardar exitosamente
   }
 
   // ── Sincronizar antecedentes desde la HC (primera consulta o actualización) ──
@@ -6739,7 +6827,21 @@ function hcGuardarEnExpediente(){
     a.actualizadoPor= (typeof sessionUser !== 'undefined' && sessionUser?.nombre) || 'HC';
   }
 
-  expGuardarTodos();initDash();log('🗂️ HC → Expediente: '+nom);
+  expGuardarTodos().then(()=>{
+    try{if(typeof renderExpLista==='function')renderExpLista();}catch(e){}
+    try{if(typeof initDash==='function')initDash();}catch(e){}
+    log('🗂️ HC → Expediente: '+nom);
+    toast('✅ Guardado en Expediente: '+nom);
+    if(_btnHC){_btnHC.disabled=false;_btnHC.textContent='🗂️ Guardar en Expediente';}
+  }).catch((e)=>{
+    console.error('Error guardar HC:',e);
+    try{
+      const ck=typeof _k==='function'?_k('expedientes'):'expedientes';
+      localStorage.setItem(ck,JSON.stringify(expedientes));
+      toast('✅ Guardado: '+nom);
+    }catch(e2){toast('⚠ Error al guardar','err');}
+    if(_btnHC){_btnHC.disabled=false;_btnHC.textContent='🗂️ Guardar en Expediente';}
+  });
 }
 
 // ── Sincronización manual HC → Antecedentes desde el tab de Antecedentes ──
@@ -9090,12 +9192,38 @@ function doImport(fileId,statusId){
 // ══════════════════════════════════════════════════════════
 // EXPEDIENTE MÉDICO
 // ══════════════════════════════════════════════════════════
-let expedientes=LS.get('expedientes',[]);
+let expedientes=(()=>{ try{ const v=LS.get('expedientes',[]); return Array.isArray(v)?v:(v&&typeof v==='object'?Object.values(v):[]); }catch(e){ return []; } })();
+
+// FIX global: helper para garantizar que expedientes siempre sea array
+function _ensureExpArray(){
+  try{
+    if(!Array.isArray(expedientes)){
+      const raw = LS.get('expedientes', []);
+      expedientes = Array.isArray(raw) ? raw : (raw && typeof raw==='object' ? Object.values(raw) : []);
+    }
+  }catch(e){ expedientes = []; }
+  return expedientes;
+}
 let expActualId=null;
 
 function expGuardarTodos(){
-  LS.set('expedientes',expedientes);
-  sbGuardarExpedientes();
+  // FIX: actualizar caché inmediatamente para lecturas síncronas
+  const cacheKey = typeof _k === 'function' ? _k('expedientes') : 'expedientes';
+  if(typeof _lsCache !== 'undefined') _lsCache[cacheKey] = expedientes;
+  // FIX: esperar a que el cifrado esté listo antes de guardar
+  const cryptoWait = (window._cryptoReady instanceof Promise) ? window._cryptoReady : Promise.resolve();
+  return cryptoWait.then(()=>{
+    return Promise.resolve(LS.set('expedientes', expedientes));
+  }).then(()=>{
+    try{ sbGuardarExpedientes(); }catch(e){}
+  }).catch((e)=>{
+    // Fallback sin cifrado si crypto falla
+    try{
+      const ck = typeof _k === 'function' ? _k('expedientes') : 'expedientes';
+      localStorage.setItem(ck, JSON.stringify(expedientes));
+    }catch{}
+    try{ sbGuardarExpedientes(); }catch{}
+  });
 }
 
 // ══════════════════════════════════════════════════════════
@@ -9240,22 +9368,46 @@ function sbDesactivar(){
 }
 
 function expNuevoPaciente(){
-  // SIEMPRE limpio — no copiar datos del paciente anterior de HC
-  const nombre=prompt('Nombre completo del nuevo paciente:','');
-  if(!nombre||!nombre.trim())return;
+  // FIX Tauri: prompt() bloqueado en WebView2 — usar modal propio
+  const ovId = '_np_overlay';
+  if(document.getElementById(ovId)) return;
+  const ov = document.createElement('div');
+  ov.id = ovId;
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:9999';
+  ov.innerHTML = `
+    <div style="background:var(--bg,#161B22);border:1px solid var(--bd,#30363d);border-radius:14px;padding:28px 24px;width:min(360px,90vw);box-shadow:0 8px 32px rgba(0,0,0,.5)">
+      <div style="font-weight:700;font-size:15px;margin-bottom:16px;color:var(--tx,#e6edf3)">\u{1F464} Nuevo Paciente</div>
+      <input id="_np_inp" class="inp" placeholder="Nombre completo del paciente" style="width:100%;margin-bottom:14px;font-size:14px" autocomplete="off">
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="pill" onclick="document.getElementById('_np_overlay').remove()" style="background:transparent;border:1px solid var(--bd,#30363d)">Cancelar</button>
+        <button class="pill pg2" onclick="expNuevoPacienteConfirmar()">Registrar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  setTimeout(()=>{ document.getElementById('_np_inp')?.focus(); }, 80);
+  ov.querySelector('#_np_inp').addEventListener('keydown', e=>{ if(e.key==='Enter') expNuevoPacienteConfirmar(); });
+}
+
+function expNuevoPacienteConfirmar(){
+  const ov = document.getElementById('_np_overlay');
+  const nombre = document.getElementById('_np_inp')?.value?.trim();
+  if(!nombre){ toast('Ingresa el nombre del paciente','err'); return; }
+  if(ov) ov.remove();
   const id='EXP-'+Date.now();
   const folio=generarFolio();
   const p={
-    id,folio,nombre:nombre.trim(),
+    id,folio,nombre,
     curp:'',fnac:'',sexo:'',sangre:'',tel:'',email:'',nss:'',
     fechaAlta:fechaHoy(),
     consultas:[],recetas:[],estudios:[],notas:''
   };
   expedientes.push(p);
-  expGuardarTodos();
-  toast('✅ Paciente registrado: '+nombre.trim());
+  expGuardarTodos().then(()=>{
+    renderExpLista();
+    initDash();
+  });
+  toast('✅ Paciente registrado: '+nombre);
   expAbrirDetalle(id);
-  initDash();
 }
 
 function expAbrirDetalle(id){
@@ -9951,6 +10103,7 @@ function filterExpedientes(){
 }
 
 function renderExpLista(q=''){
+  _ensureExpArray();
   const el=document.getElementById('exp-lista-content');
   let lista=expedientes;
   if(q){
@@ -10327,6 +10480,10 @@ function loadCfgIntoForm(){
   if(ak&&cfg.anthropicKey) ak.value=cfg.anthropicKey;
   const ast=document.getElementById('anthropic-key-status');
   if(ast&&cfg.anthropicKey){ast.textContent='✅ Key configurada';ast.style.color='var(--ac2)';}
+  const gk=document.getElementById('cfg-gemini-key');
+  if(gk&&cfg.geminiKey) gk.value=cfg.geminiKey;
+  const gst=document.getElementById('gemini-key-status');
+  if(gst&&cfg.geminiKey){gst.textContent='✅ Key configurada';gst.style.color='var(--ac2)';}
   // Show sb-status badge in topbar if configured
   const ind=document.getElementById('sb-status');
   if(ind) ind.style.display=(cfg.sbEnabled&&cfg.sbUrl)?'':'none';
@@ -10392,7 +10549,15 @@ function setDarkMode(dark){
   cfg.dark=dark;persistCfg();
 }
 function setFontSize(sz){document.body.style.fontSize=sz+'px';}
-function toggleIA(enabled){
+function toggleIA(enabled, silent=false){
+  // Solo admin puede ACTIVAR la IA; cualquiera puede desactivarla
+  if(enabled && (typeof sessionUser === 'undefined' || sessionUser?.rol !== 'admin')){
+    toast('⛔ Solo el administrador puede activar el módulo IA','err');
+    // Revertir el checkbox visualmente
+    const cb = document.getElementById('cfg-ia');
+    if(cb) cb.checked = false;
+    return;
+  }
   cfg.iaEnabled=enabled;
   persistCfg();
   // Sidebar item
@@ -10404,7 +10569,9 @@ function toggleIA(enabled){
   document.querySelectorAll('[onclick*="archIAAnalizar"],[onclick*="hcIAAnalizar"]').forEach(btn=>{
     btn.style.display=enabled?'':'none';
   });
-  toast(enabled?'🤖 Módulo IA activado':'🔇 Módulo IA desactivado');
+  if(!silent && (enabled || (typeof sessionUser !== 'undefined' && sessionUser))) {
+    toast(enabled?'🤖 Módulo IA activado':'🔇 Módulo IA desactivado');
+  }
 }
 
 function guardarAnthropicKey(){
@@ -10445,6 +10612,250 @@ async function probarAnthropicKey(){
     if(st){st.textContent='❌ Sin conexión: '+e.message;st.style.color='var(--rd)';}
   }
 }
+
+function guardarGeminiKey(){
+  const k=(document.getElementById('cfg-gemini-key')?.value||'').trim();
+  if(!k){toast('Ingresa la API Key de Gemini','err');return;}
+  cfg.geminiKey=k;
+  persistCfg();
+  toast('✅ API Key de Gemini guardada');
+  const st=document.getElementById('gemini-key-status');
+  if(st){st.textContent='✅ Key guardada — prueba la conexión';st.style.color='var(--ac2)';}
+}
+
+async function probarGeminiKey(){
+  const k=(document.getElementById('cfg-gemini-key')?.value||cfg.geminiKey||'').trim();
+  if(!k){toast('Ingresa la API Key de Gemini primero','err');return;}
+  const st=document.getElementById('gemini-key-status');
+  if(st){st.textContent='⏳ Probando...';st.style.color='var(--so)';}
+  try{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${k}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:'ok'}]}]})
+    });
+    if(r.ok){
+      cfg.geminiKey=k;persistCfg();
+      if(st){st.textContent='✅ API Key de Gemini válida — IA lista';st.style.color='var(--ac2)';}
+      toast('✅ API Key de Gemini válida — lista para usar');
+    } else {
+      const e=await r.json();
+      if(st){st.textContent='❌ '+(e.error?.message||'Key inválida');st.style.color='var(--rd)';}
+    }
+  }catch(e){
+    if(st){st.textContent='❌ Sin conexión: '+e.message;st.style.color='var(--rd)';}
+  }
+}
+
+// ── Helper centralizado: llama Claude o Gemini según disponibilidad ──
+// Prioridad: Claude primero (si tiene key), Gemini como fallback
+async function iaFetch({promptText, imageBase64=null, imageMediaType=null, maxTokens=1500}){
+  const claudeKey=cfg.anthropicKey||'';
+  const geminiKey=cfg.geminiKey||'';
+  if(!claudeKey&&!geminiKey) throw new Error('NO_KEY');
+  if(claudeKey){
+    const content=[];
+    if(imageBase64) content.push({type:'image',source:{type:'base64',media_type:imageMediaType,data:imageBase64}});
+    content.push({type:'text',text:promptText});
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens,messages:[{role:'user',content}]})
+    });
+    if(!r.ok){const e=await r.json();throw new Error(e.error?.message||'Error Claude '+r.status);}
+    const d=await r.json();
+    return d.content?.[0]?.text||'';
+  } else {
+    const parts=[];
+    if(imageBase64) parts.push({inline_data:{mime_type:imageMediaType,data:imageBase64}});
+    parts.push({text:promptText});
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts}],generationConfig:{maxOutputTokens:maxTokens}})
+    });
+    if(!r.ok){const e=await r.json();throw new Error(e.error?.message||'Error Gemini '+r.status);}
+    const d=await r.json();
+    return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// IA — ESTRUCTURAR NOTAS CLÍNICAS
+// ══════════════════════════════════════════════════════════
+
+// ── Helper: aplica resultado de IA a campos y muestra preview ──
+function _iaAplicarCampos(campos){
+  // campos = { id: valor } — solo aplica si el campo existe y tiene valor
+  Object.entries(campos).forEach(([id, val])=>{
+    if(!val) return;
+    const el = document.getElementById(id);
+    if(!el) return;
+    // No sobreescribir si ya tiene contenido (a menos que esté vacío)
+    if(el.value && el.value.trim()) {
+      el.value = el.value.trim() + '\n' + val;
+    } else {
+      el.value = val;
+    }
+  });
+}
+
+// ── Nueva Consulta — genera nota y muestra preview con botón "Aplicar" ──
+async function ncEstructurarIA(){
+  const borrador = (document.getElementById('nc-ia-borrador')?.value||'').trim();
+  if(!borrador){ toast('Escribe o dicta el resumen de la consulta primero','err'); return; }
+  if(!cfg.anthropicKey && !cfg.geminiKey){ toast('Configura tu API Key de IA en Configuración','err'); return; }
+
+  const btn = document.getElementById('nc-ia-btn');
+  const loading = document.getElementById('nc-ia-loading');
+  const resultado = document.getElementById('nc-ia-resultado');
+  btn.disabled = true;
+  loading.style.display = 'inline';
+  resultado.style.display = 'none';
+
+  const prompt = `Eres un asistente médico experto. A partir del siguiente resumen libre de una consulta médica, genera una nota clínica estructurada en JSON con estos campos exactos:
+
+{
+  "motivo": "Motivo de consulta en 1 oración clara",
+  "hallazgos": "Exploración física y hallazgos relevantes, incluyendo signos vitales si se mencionan",
+  "diagnostico": "Diagnóstico principal en terminología médica formal",
+  "plan": "Plan de tratamiento completo: medicamentos con dosis y duración, indicaciones, seguimiento",
+  "cie10": "Código CIE-10 más probable (solo el código, ej: J02.9)",
+  "meds": "Medicamentos en formato: Fármaco dosis vía frecuencia duración"
+}
+
+Resumen del médico: "${borrador}"
+
+Responde SOLO con el JSON, sin texto adicional ni backticks.`;
+
+  try {
+    let txt = await iaFetch({ promptText: prompt, maxTokens: 800 });
+    txt = txt.replace(/```json|```/g,'').trim();
+    const res = JSON.parse(txt);
+
+    resultado.style.display = 'block';
+    resultado.innerHTML = `
+      <div style="font-size:11px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📋 Nota generada — Revisa y aplica</div>
+      ${res.motivo?`<div style="margin-bottom:6px"><span style="font-size:10px;font-weight:700;color:var(--so);text-transform:uppercase">Motivo:</span><div style="color:var(--tx)">${res.motivo}</div></div>`:''}
+      ${res.diagnostico?`<div style="margin-bottom:6px"><span style="font-size:10px;font-weight:700;color:var(--so);text-transform:uppercase">Diagnóstico:</span><div style="color:var(--tx)">${res.diagnostico} ${res.cie10?'<span style="background:rgba(46,168,224,.15);color:var(--ac);padding:1px 6px;border-radius:4px;font-size:11px">'+res.cie10+'</span>':''}</div></div>`:''}
+      ${res.hallazgos?`<div style="margin-bottom:6px"><span style="font-size:10px;font-weight:700;color:var(--so);text-transform:uppercase">Hallazgos:</span><div style="color:var(--tx)">${res.hallazgos}</div></div>`:''}
+      ${res.plan?`<div style="margin-bottom:6px"><span style="font-size:10px;font-weight:700;color:var(--so);text-transform:uppercase">Plan:</span><div style="color:var(--tx)">${res.plan}</div></div>`:''}
+      ${res.meds?`<div style="margin-bottom:10px"><span style="font-size:10px;font-weight:700;color:var(--so);text-transform:uppercase">Medicamentos:</span><div style="color:var(--tx)">${res.meds}</div></div>`:''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="pill pg2" onclick="ncAplicarIAResultado(${JSON.stringify(res).replace(/"/g,'&quot;')})">✅ Aplicar a los campos</button>
+        <button class="pill pn" onclick="document.getElementById('nc-ia-resultado').style.display='none'" style="font-size:11px">✕ Descartar</button>
+      </div>
+      <div style="font-size:10px;color:var(--mu);margin-top:8px">⚠️ Revisa siempre la nota antes de guardar. La IA puede cometer errores.</div>`;
+
+    log('✨ IA estructuró nota de consulta');
+  } catch(e){
+    resultado.style.display = 'block';
+    resultado.innerHTML = `<div style="color:var(--rd)">❌ Error al generar nota: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    loading.style.display = 'none';
+  }
+}
+
+function ncAplicarIAResultado(res){
+  _iaAplicarCampos({
+    'nc-motivo': res.motivo||'',
+    'nc-hallazgos': res.hallazgos||'',
+    'nc-plan': res.plan||'',
+    'nc-meds': res.meds||'',
+    'nc-dx': res.cie10||'',
+  });
+  document.getElementById('nc-ia-resultado').style.display='none';
+  toast('✅ Nota aplicada — revisa los campos');
+}
+
+// ── Nota de Evolución SOAP — llena los 4 campos S O A P ──
+async function nevEstructurarIA(){
+  const borrador = (document.getElementById('nev-ia-borrador')?.value||'').trim();
+  if(!borrador){ toast('Escribe o dicta el resumen primero','err'); return; }
+  if(!cfg.anthropicKey && !cfg.geminiKey){ toast('Configura tu API Key de IA en Configuración','err'); return; }
+
+  const btn = document.getElementById('nev-ia-btn');
+  const loading = document.getElementById('nev-ia-loading');
+  btn.disabled = true;
+  loading.style.display = 'inline';
+
+  const prompt = `Eres un asistente médico. A partir del siguiente resumen libre, genera una nota de evolución en formato SOAP en JSON:
+
+{
+  "s": "Subjetivo: síntomas referidos por el paciente, motivo de consulta",
+  "o": "Objetivo: hallazgos a la exploración física, signos vitales, estudios",
+  "a": "Análisis: diagnóstico de trabajo, impresión diagnóstica con terminología formal",
+  "p": "Plan: tratamiento, medicamentos con dosis y frecuencia, indicaciones, seguimiento y próxima cita"
+}
+
+Resumen: "${borrador}"
+
+Responde SOLO con el JSON, sin texto adicional ni backticks.`;
+
+  try {
+    let txt = await iaFetch({ promptText: prompt, maxTokens: 800 });
+    txt = txt.replace(/```json|```/g,'').trim();
+    const res = JSON.parse(txt);
+    _iaAplicarCampos({ 'nev-s': res.s, 'nev-o': res.o, 'nev-a': res.a, 'nev-p': res.p });
+    toast('✅ Campos SOAP completados con IA — revisa antes de guardar');
+    log('✨ IA llenó nota SOAP');
+  } catch(e){
+    toast('❌ Error al generar SOAP: '+e.message,'err');
+  } finally {
+    btn.disabled = false;
+    loading.style.display = 'none';
+  }
+}
+
+// ── Historia Clínica — completa motivo, anamnesis, EF y plan ──
+async function hcEstructurarIA(){
+  const borrador = (document.getElementById('hc-ia-borrador')?.value||'').trim();
+  if(!borrador){ toast('Escribe o dicta el resumen del caso primero','err'); return; }
+  if(!cfg.anthropicKey && !cfg.geminiKey){ toast('Configura tu API Key de IA en Configuración','err'); return; }
+
+  const btn = document.getElementById('hc-ia-btn');
+  const loading = document.getElementById('hc-ia-loading');
+  btn.disabled = true;
+  loading.style.display = 'inline';
+
+  const prompt = `Eres un asistente médico experto en historia clínica. A partir del resumen libre, genera en JSON los siguientes campos para una historia clínica formal:
+
+{
+  "motivo": "Motivo de consulta en 1-2 oraciones formales",
+  "anamnesis": "Anamnesis completa: inicio, evolución, síntomas asociados, factores que agravan o alivian",
+  "ef_general": "Exploración física general: aspecto, estado de hidratación, cooperador, orientado...",
+  "ef_abdomen": "Hallazgos abdominales si se mencionan, si no deja vacío",
+  "plan": "Plan de tratamiento y evolución: medicamentos, procedimientos, referencia, seguimiento",
+  "diagnostico_clinico": "Diagnóstico en terminología médica formal"
+}
+
+Resumen del médico: "${borrador}"
+
+Responde SOLO con el JSON, sin texto adicional ni backticks.`;
+
+  try {
+    let txt = await iaFetch({ promptText: prompt, maxTokens: 1000 });
+    txt = txt.replace(/```json|```/g,'').trim();
+    const res = JSON.parse(txt);
+    _iaAplicarCampos({
+      'hc-motivo': res.motivo||'',
+      'hc-anamnesis': res.anamnesis||'',
+      'hc-ef-general': res.ef_general||'',
+      'hc-ef-abdomen': res.ef_abdomen||'',
+      'hc-plan': res.plan||'',
+      'hc-dx-clin': res.diagnostico_clinico||'',
+    });
+    toast('✅ Historia Clínica completada con IA — revisa los campos');
+    log('✨ IA completó Historia Clínica');
+  } catch(e){
+    toast('❌ Error al generar HC: '+e.message,'err');
+  } finally {
+    btn.disabled = false;
+    loading.style.display = 'none';
+  }
+}
+
 function toggleSidebar(show){
   document.getElementById('sb').style.display=show?'flex':'none';
 }
@@ -10919,6 +11330,53 @@ const HC_ESPS = {
 };
 
 let hcEspActual = 'general';
+
+function filtrarTabsSegunRol(){
+  const su = (typeof sessionUser !== 'undefined') ? sessionUser : null;
+  if(!su || su.rol === 'admin') {
+    // Admin ve todas las pestañas
+    document.querySelectorAll('[id^="hc-btn-"]').forEach(btn => btn.style.display = '');
+    return;
+  }
+  if(su.rol === 'medico') {
+    // Obtener especialidad del médico
+    const espMap = {
+      'ginecolog': 'gineco', 'obstetr': 'gineco',
+      'pediatr': 'pediatria',
+      'urgencia': 'urgencias', 'emergencia': 'urgencias',
+      'cardiol': 'cardio',
+      'traumat': 'traumato', 'ortop': 'traumato',
+      'dermatol': 'dermato',
+      'oftalmol': 'oftalmologia',
+      'psiquiatr': 'psiquiatria', 'psicol': 'psiquiatria',
+    };
+    // 1. Usar hcesp guardado en registro
+    // 2. Usar cfg.hcEsp (preferencia guardada)
+    // 3. Mapear desde hcEspActual actual
+    // 4. General por defecto
+    let esp = su.hcesp || (typeof cfg !== 'undefined' && cfg.hcEsp) || 'general';
+    // Si sigue siendo general, usar hcEspActual (ya seteado por el sistema al abrir HC)
+    if(esp === 'general' && typeof hcEspActual !== 'undefined' && hcEspActual !== 'general'){
+      esp = hcEspActual;
+    }
+    document.querySelectorAll('[id^="hc-btn-"]').forEach(btn => {
+      const btnEsp = btn.id.replace('hc-btn-', '');
+      // Siempre muestra general + su especialidad
+      btn.style.display = (btnEsp === 'general' || btnEsp === esp) ? '' : 'none';
+    });
+    return;
+  }
+  // Recepción: ocultar Historia Clínica del menú y mostrar solo general en tabs
+  const hcMenu = document.querySelector('.ni[onclick*="historia"], .ni[href*="historia"], a[onclick*="hc-screen"], [data-nav="hc"]');
+  document.querySelectorAll('[id^="hc-btn-"]').forEach(btn => {
+    const btnEsp = btn.id.replace('hc-btn-', '');
+    btn.style.display = btnEsp === 'general' ? '' : 'none';
+  });
+  // Ocultar el link de Historia Clínica en el sidebar para recepción
+  document.querySelectorAll('.ni').forEach(el => {
+    if(el.textContent.trim().includes('Historia Clínica')) el.style.display = 'none';
+  });
+}
 
 function setHCEsp(esp, save=true){
   hcEspActual = esp;
@@ -11446,6 +11904,7 @@ function loginContinuar(){
       const cfgAdmin = LS.get('cfg_'+adminUser.user, {});
       if(cfgAdmin.iaEnabled !== undefined) cfg.iaEnabled = cfgAdmin.iaEnabled;
       if(cfgAdmin.anthropicKey) cfg.anthropicKey = cfgAdmin.anthropicKey;
+      if(cfgAdmin.geminiKey) cfg.geminiKey = cfgAdmin.geminiKey;
     }
   }
   loadCfgIntoForm();
@@ -11458,7 +11917,7 @@ function loginContinuar(){
   aplicarPermisosSidebar();
   if(found.rol==='recepcion') aplicarModoRecepcion();
   showPage(found.rol==='recepcion' ? 'agenda' : 'dashboard');
-  if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false),150);
+  if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false,true),150);
   toast('✅ Bienvenido, '+found.nombre);
   log('🔐 Sesión continuada: '+found.nombre);
   if(parseInt(cfg.autoLogout||'0') > 0) autoLogoutReset();
@@ -11654,7 +12113,7 @@ function regTipoCambio(){
   if(tipo === 'admin'){
     invSec.style.display = 'none'; // admin nunca necesita código
   } else {
-    invSec.style.display = ''; // médico sí necesita código
+    invSec.style.display = ''; // médico y recepción sí necesitan código
   }
 }
 
@@ -11692,8 +12151,13 @@ async function regFinalizar(){
 
   if(!esAdmin){
     if(!invite){ toast('Ingresa el código de invitación que te dio el administrador','err'); return; }
-    const invIdx = validarInvite(invite);
-    if(invIdx < 0){ toast('Código de invitación inválido o ya utilizado','err'); return; }
+    // Buscar el código en todos los grupos para activar el correcto
+    const inviteEncontrado = buscarInviteEnTodosGrupos(invite);
+    if(!inviteEncontrado){ toast('Código de invitación inválido o ya utilizado','err'); return; }
+    // Activar el grupo al que pertenece el código
+    if(inviteEncontrado.gid && inviteEncontrado.gid !== _gid){
+      mtActivarGrupo(inviteEncontrado.gid);
+    }
   }
 
   if(usuarios.find(u=>u.user===user)){ toast('Ese nombre de usuario ya existe','err'); return; }
@@ -11712,17 +12176,29 @@ async function regFinalizar(){
   LS.set('cfg_'+user, cfgNuevo);
 
   const _reg_pass = await sha256(pass);
-  const rol = esAdmin ? 'admin' : 'medico';
+  const rol = esAdmin ? 'admin' : tipoSeleccionado === 'recepcion' ? 'recepcion' : 'medico';
   const nuevo = { user, nombre, pass: _reg_pass, rol };
   if(email) nuevo.email = email;
   if(sq)    { nuevo.sq = sq; nuevo.sa = sa; }
+  // Guardar especialidad del médico
+  if(rol === 'medico'){
+    const hcespEl = document.getElementById('reg-hcesp');
+    if(hcespEl) nuevo.hcesp = hcespEl.value || 'general';
+  }
 
   if(esAdmin){
     LS.set(AUTH_KEY, [nuevo]);
   } else {
-    marcarInviteUsado(invite);
-    usuarios.push(nuevo);
-    saveUsuarios(usuarios);
+    // Marcar código como usado (ya encontramos el grupo correcto arriba)
+    if(tipoSeleccionado === 'recepcion'){
+      marcarInviteRecepcionUsado(invite);
+    } else {
+      marcarInviteUsado(invite);
+    }
+    // Leer usuarios del grupo recién activado
+    const usuariosGrupo = getUsuarios();
+    usuariosGrupo.push(nuevo);
+    saveUsuarios(usuariosGrupo);
   }
   localStorage.setItem(REG_KEY, '1');
   sessionStorage.removeItem('__mt_nuevo_grupo__'); // limpiar flag de grupo nuevo
@@ -11730,7 +12206,8 @@ async function regFinalizar(){
   authTab('login');
   document.getElementById('login-user').value = user;
   setTimeout(()=>document.getElementById('login-pass').focus(), 150);
-  toast(esAdmin ? '✅ Cuenta de administrador creada' : '✅ Cuenta creada con rol Médico');
+  const rolLabel = esAdmin ? '✅ Cuenta de administrador creada' : rol === 'recepcion' ? '✅ Cuenta creada con rol Recepcionista' : '✅ Cuenta creada con rol Médico';
+  toast(rolLabel);
   log('🎉 Registro: '+nombre+' ('+rol+')');
 }
 
@@ -11808,41 +12285,13 @@ async function iaAnalizar(imageData, categoria, panelId, loadingId, resultId, te
 Responde en español. Sé preciso y usa terminología médica apropiada.`;
 
   try {
-    const apiKey=cfg.anthropicKey||'';
-    if(!apiKey){
+    if(!cfg.anthropicKey&&!cfg.geminiKey){
       loading.style.display='none';
       result.style.display='block';
-      texto.innerHTML=`<div style="color:var(--am)">⚠️ Falta la API Key de Anthropic.<br>Ve a <b>Configuración → 🔧 Sistema → API Key Anthropic</b>.</div>`;
+      texto.innerHTML=`<div style="color:var(--am)">⚠️ Falta la API Key de IA.<br>Ve a <b>Configuración → 🔧 Sistema</b> y agrega tu key de Claude o Gemini.</div>`;
       return;
     }
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            { type: 'text', text: prompt }
-          ]
-        }]
-      })
-    });
-
-    if(!response.ok){
-      const err = await response.json();
-      throw new Error(err.error?.message || 'Error de API: '+response.status);
-    }
-
-    const data = await response.json();
-    const respText = data.content?.[0]?.text || 'Sin respuesta';
+    const respText = await iaFetch({promptText:prompt, imageBase64:base64, imageMediaType:mediaType, maxTokens:1000});
 
     // Formatear respuesta — captura variaciones de mayúsculas/minúsculas y con/sin dos puntos
     let html = respText
@@ -11875,7 +12324,7 @@ Responde en español. Sé preciso y usa terminología médica apropiada.`;
     texto.innerHTML = `<div style="color:var(--rd)">❌ ${esCORS
       ? 'No se pudo conectar a la API. Verifica tu internet y API Key.'
       : 'Error al analizar: '+msg}</div>
-      <div style="color:var(--so);font-size:12px;margin-top:8px">💡 Configura tu API Key en <b>Configuración → 🔧 Sistema</b>.</div>`;
+      <div style="color:var(--so);font-size:12px;margin-top:8px">💡 Configura tu API Key (Claude o Gemini) en <b>Configuración → 🔧 Sistema</b>.</div>`;
   }
 }
 
@@ -11941,6 +12390,7 @@ function doLogin(){
           const cfgAdmin = LS.get('cfg_'+adminUser.user, {});
           if(cfgAdmin.iaEnabled !== undefined) cfg.iaEnabled = cfgAdmin.iaEnabled;
           if(cfgAdmin.anthropicKey) cfg.anthropicKey = cfgAdmin.anthropicKey;
+          if(cfgAdmin.geminiKey) cfg.geminiKey = cfgAdmin.geminiKey;
         }
       }
       loadCfgIntoForm();
@@ -11956,11 +12406,22 @@ function doLogin(){
       aplicarPermisosSidebar();
       if(found.rol==='recepcion') aplicarModoRecepcion();
       showPage(found.rol==='recepcion' ? 'agenda' : 'dashboard');
-      if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false),150);
+      if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false,true),150);
       toast('✅ Bienvenido, '+found.nombre);
       log('🔐 Sesión iniciada: '+found.nombre+' ('+found.rol+')');
       try{ auditLog('🔐 Inicio de sesión','Usuario: '+found.nombre+' — Rol: '+found.rol); }catch(e){}
       if(parseInt(cfg.autoLogout||'0') > 0) autoLogoutReset();
+      // FIX: recargar expedientes y datos del grupo activo después del login
+      if(typeof mtWarmGrupo === 'function'){
+        mtWarmGrupo().then(()=>{
+          try{
+    const _rawExp = LS.get('expedientes', []);
+    expedientes = Array.isArray(_rawExp) ? _rawExp : (_rawExp && typeof _rawExp==='object' ? Object.values(_rawExp) : []);
+  }catch{ expedientes = []; }
+          if(typeof renderExpLista === 'function') renderExpLista();
+          if(typeof initDash === 'function') initDash();
+        });
+      }
     } else {
       err.textContent='Usuario o contraseña incorrectos.';
       err.style.display='block';
@@ -12173,15 +12634,13 @@ async function cambiarPassword(){
 // IMPRESIÓN COMPATIBLE CON TAURI
 // ══════════════════════════════════════════════════════════
 function imprimirDocumento(htmlContent){
-  // Usa iframe oculto: compatible con Tauri, Electron y navegadores.
-  // A diferencia del overlay (position:fixed), el iframe tiene su propio
-  // documento y el navegador/WebView2 lo pagina correctamente.
-  const old = document.getElementById('_print_iframe');
-  if(old) old.remove();
+  // Limpiar iframe previo
+  const prev = document.getElementById('_print_iframe');
+  if(prev) prev.remove();
 
   const iframe = document.createElement('iframe');
   iframe.id = '_print_iframe';
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden';
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;visibility:hidden;opacity:0';
   document.body.appendChild(iframe);
 
   const iDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -12194,20 +12653,20 @@ function imprimirDocumento(htmlContent){
       iframe.contentWindow.focus();
       iframe.contentWindow.print();
     } catch(e) {
-      // Fallback Tauri: usar window.print con @media print ocultar todo menos iframe
       window.print();
     }
+    // Cerrar iframe después de que el usuario termine con el diálogo
     setTimeout(() => {
       const el = document.getElementById('_print_iframe');
       if(el) el.remove();
-    }, 2000);
+    }, 1000);
   };
 
-  if(iframe.contentDocument.readyState === 'complete'){
-    setTimeout(doprint, 350);
+  if(iDoc.readyState === 'complete'){
+    setTimeout(doprint, 300);
   } else {
-    iframe.onload = () => setTimeout(doprint, 350);
-    setTimeout(doprint, 1000); // fallback Tauri si onload no dispara
+    iframe.onload = () => setTimeout(doprint, 300);
+    setTimeout(doprint, 800);
   }
 }
 
@@ -13706,32 +14165,14 @@ Responde EXACTAMENTE en este formato JSON válido, sin texto adicional antes ni 
 Incluye mínimo 3 y máximo 6 diagnósticos diferenciales ordenados de mayor a menor probabilidad. Responde en español.`;
 
   try {
-    const apiKey=cfg.anthropicKey||'';
-    if(!apiKey){
+    if(!cfg.anthropicKey&&!cfg.geminiKey){
       document.getElementById('iadx-loading').style.display='none';
       document.getElementById('iadx-resultado').style.display='block';
-      document.getElementById('iadx-resultado').innerHTML=`<div style="color:var(--am);padding:10px">⚠️ Falta la API Key de Anthropic.<br><br>Ve a <b>Configuración → 🔧 Sistema → API Key Anthropic</b> y pega tu clave.</div>`;
+      document.getElementById('iadx-resultado').innerHTML=`<div style="color:var(--am);padding:10px">⚠️ Falta la API Key de IA.<br><br>Ve a <b>Configuración → 🔧 Sistema</b> y agrega tu key de Claude o Gemini.</div>`;
       document.getElementById('iadx-btn').disabled=false;
       return;
     }
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-direct-browser-access':'true'
-      },
-      body: JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1500,
-        messages:[{role:'user',content:prompt}]
-      })
-    });
-
-    if(!response.ok){const err=await response.json();throw new Error(err.error?.message||'Error '+response.status);}
-    const data=await response.json();
-    let txt=data.content?.[0]?.text||'{}';
+    let txt = await iaFetch({promptText:prompt, maxTokens:1500});
     txt=txt.replace(/```json|```/g,'').trim();
     const res=JSON.parse(txt);
 
@@ -13794,10 +14235,10 @@ Incluye mínimo 3 y máximo 6 diagnósticos diferenciales ordenados de mayor a m
     const esCORS=msg.includes('Failed to fetch')||msg.includes('NetworkError');
     document.getElementById('iadx-resultado').innerHTML=`
       <div style="color:var(--rd);padding:10px">❌ ${esCORS
-        ?'No se pudo conectar a la API de Anthropic. Verifica tu conexión a internet y que la API Key sea correcta.'
+        ?'No se pudo conectar a la API de IA. Verifica tu conexión a internet y que la API Key sea correcta.'
         :'Error: '+msg}</div>
       <div style="color:var(--so);font-size:12px;margin-top:8px;padding:0 10px">
-        💡 Verifica tu API Key en <b>Configuración → 🔧 Sistema</b>.
+        💡 Verifica tu API Key (Claude o Gemini) en <b>Configuración → 🔧 Sistema</b>.
       </div>`;
   } finally {
     document.getElementById('iadx-btn').disabled=false;
@@ -14841,6 +15282,7 @@ const ALERTAS_CONFIG = [
 ];
 
 function calcularAlertas(){
+  _ensureExpArray();
   const alertas = [];
   const hoy = new Date();
 
@@ -15414,7 +15856,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       updateSessionUI();
       // FIX: siempre arrancar en dashboard al restaurar sesión
       showPage('dashboard');
-      if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false),150);
+      if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false,true),150);
       // Iniciar timer de cierre automático por inactividad
       if(parseInt(cfg.autoLogout||'0') > 0) autoLogoutReset();
     } else {
@@ -15443,7 +15885,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   initLogoFromCfg();
 
   // Aplicar estado de IA guardado
-  if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false),100);
+  if(cfg.iaEnabled===false) setTimeout(()=>toggleIA(false,true),100);
   // Arrancar Supabase si está configurado
   if(cfg.sbEnabled&&cfg.sbUrl&&cfg.sbKey) setTimeout(sbInicializar,800);
 
@@ -15585,23 +16027,34 @@ document.addEventListener('click',e=>{
 // ══════════════════════════════════════════════════════════
 function abrirNotaEvolucionRapida(){
   const modal = document.getElementById('nota-rapida-modal');
-  if(!modal) return;
+  if(!modal){console.error('nota-rapida-modal no existe');return;}
+  _ensureExpArray();
+  // Forzar visibilidad (fix Tauri)
+  modal.style.display='flex';
+  modal.style.position='fixed';
+  modal.style.inset='0';
+  modal.style.zIndex='99999';
+  modal.style.background='rgba(0,0,0,.8)';
+  modal.style.alignItems='center';
+  modal.style.justifyContent='center';
   // Poblar selector opcional de pacientes
   const sel = document.getElementById('nrp-paciente');
-  sel.innerHTML = '<option value="">— guardar en expediente (opcional) —</option>';
-  expedientes.forEach((p,i)=>{
+  if(sel){
+    sel.innerHTML = '<option value="">— guardar en expediente (opcional) —</option>';
+    expedientes.forEach((p,i)=>{
     const opt = document.createElement('option');
     opt.value = i;
     opt.textContent = p.nombre + (p.edad ? ` · ${p.edad} años` : '');
     sel.appendChild(opt);
-  });
+    });
+  }
   // Fecha hoy
-  document.getElementById('nrp-fecha').value = fechaHoy();
+  const _fEl=document.getElementById('nrp-fecha');
+  if(_fEl) _fEl.value=fechaHoy();
   // Limpiar campos
   ['nrp-s','nrp-o','nrp-a','nrp-p','nrp-nombre-pac'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
-  modal.style.display = 'flex';
 }
 
 function cerrarNotaRapida(){
@@ -15682,12 +16135,21 @@ function descargarNotaRapida(){
 }
 
 function guardarNotaRapida(){
-  const idxStr = document.getElementById('nrp-paciente').value;
-  if(idxStr === ''){ toast('⚠️ Selecciona un expediente del selector para guardar', 'warn'); return; }
-  const idx = parseInt(idxStr);
-  const pac = expedientes[idx];
-  if(!pac) return;
-
+  _ensureExpArray();
+  const idxStr = document.getElementById('nrp-paciente')?.value||'';
+  let pac;
+  if(idxStr!==''){
+    pac=expedientes[parseInt(idxStr)];
+    if(!pac){toast('⚠️ Expediente no encontrado','err');return;}
+  } else {
+    const nombreLibre=document.getElementById('nrp-nombre-pac')?.value?.trim();
+    if(!nombreLibre){toast('⚠️ Escribe el nombre del paciente o selecciona uno del selector','warn');return;}
+    pac=expedientes.find(x=>x.nombre&&x.nombre.toLowerCase()===nombreLibre.toLowerCase());
+    if(!pac){
+      pac={id:'EXP-'+Date.now(),folio:(typeof generarFolio==='function'?generarFolio():'F'+Date.now()),nombre:nombreLibre,fechaAlta:(typeof fechaHoy==='function'?fechaHoy():''),consultas:[],recetas:[],estudios:[],notas:[]};
+      expedientes.push(pac);
+    }
+  }
   if(!pac.notas) pac.notas = [];
 
   const fecha = document.getElementById('nrp-fecha').value;
@@ -18938,8 +19400,11 @@ function expEliminarCambio(pacId, idx){
 // CÓDIGOS DE INVITACIÓN
 // ══════════════════════════════════════════════════════════
 const INVITE_KEY = 'medbc_invites';
+const INVITE_REC_KEY = 'medbc_invites_recepcion';
 function getInvites(){ return LS.get(INVITE_KEY, []); }
 function saveInvites(arr){ LS.set(INVITE_KEY, arr); }
+function getInvitesRec(){ return LS.get(INVITE_REC_KEY, []); }
+function saveInvitesRec(arr){ LS.set(INVITE_REC_KEY, arr); }
 
 function generarCodigoInvite(){
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -18948,6 +19413,12 @@ function generarCodigoInvite(){
   const invites = getInvites();
   invites.push({ code, usado: false, creadoEn: new Date().toLocaleString('es-MX') });
   saveInvites(invites);
+  // Guardar lookup en localStorage para encontrar el grupo al registrarse
+  try{
+    const lookup = JSON.parse(_lgi('medbc_invite_lookup')||'{}');
+    lookup[code] = { gid: window._gid, tipo: 'medico' };
+    _lsi('medbc_invite_lookup', JSON.stringify(lookup));
+  }catch(e){ console.error('lookup medico error', e); }
   renderInviteList();
   toast('🎟️ Código generado: ' + code);
 }
@@ -18987,11 +19458,85 @@ function validarInvite(code){
   return invites.findIndex(i => i.code === code.toUpperCase().trim() && !i.usado);
 }
 
+
+
 function marcarInviteUsado(code){
   const invites = getInvites();
   const idx = invites.findIndex(i => i.code === code.toUpperCase().trim());
   if(idx >= 0){ invites[idx].usado = true; invites[idx].usadoEn = new Date().toLocaleString('es-MX'); }
   saveInvites(invites);
+}
+
+// ── Recepción ──
+function generarCodigoInviteRecepcion(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const rand = n => Array.from({length:n}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+  const code = `REC-${rand(4)}-${rand(4)}`;
+  const invites = getInvitesRec();
+  invites.push({ code, usado: false, creadoEn: new Date().toLocaleString('es-MX') });
+  saveInvitesRec(invites);
+  // Guardar lookup en localStorage para encontrar el grupo al registrarse
+  try{
+    const lookup = JSON.parse(_lgi('medbc_invite_lookup')||'{}');
+    lookup[code] = { gid: window._gid, tipo: 'recepcion' };
+    _lsi('medbc_invite_lookup', JSON.stringify(lookup));
+  }catch(e){ console.error('lookup recepcion error', e); }
+  renderInviteListRecepcion();
+  toast('🎟️ Código recepción generado: ' + code);
+}
+
+function renderInviteListRecepcion(){
+  const el = document.getElementById('invite-list-recepcion');
+  if(!el) return;
+  const invites = getInvitesRec();
+  if(!invites.length){
+    el.innerHTML = '<div style="font-size:12px;color:var(--mu)">Sin códigos generados aún.</div>';
+    return;
+  }
+  el.innerHTML = invites.slice().reverse().map((inv, i) => {
+    const realIdx = invites.length - 1 - i;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd);gap:8px;flex-wrap:wrap">
+      <div>
+        <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:${inv.usado?'var(--mu)':'var(--ac)'};letter-spacing:1px">${inv.code}</span>
+        <span class="pill ${inv.usado?'':'pg2'}" style="font-size:10px;margin-left:8px">${inv.usado ? '✅ Usado' : '🟢 Disponible'}</span>
+        <div style="font-size:10px;color:var(--mu);margin-top:2px">Generado: ${inv.creadoEn}${inv.usadoEn?' · Usado: '+inv.usadoEn:''}</div>
+      </div>
+      ${!inv.usado ? `<button class="pill pr2" style="font-size:10px" onclick="revocarInviteRecepcion(${realIdx})">🗑️ Revocar</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function revocarInviteRecepcion(idx){
+  if(!confirm('¿Revocar este código?')) return;
+  const invites = getInvitesRec();
+  invites.splice(idx, 1);
+  saveInvitesRec(invites);
+  renderInviteListRecepcion();
+  toast('🗑️ Código revocado');
+}
+
+function validarInviteRecepcion(code){
+  const invites = getInvitesRec();
+  return invites.findIndex(i => i.code === code.toUpperCase().trim() && !i.usado);
+}
+
+function marcarInviteRecepcionUsado(code){
+  const codeUp = code.toUpperCase().trim();
+  const invites = getInvitesRec();
+  const idx = invites.findIndex(i => i.code === codeUp);
+  if(idx >= 0){
+    invites[idx].usado = true;
+    invites[idx].usadoEn = new Date().toLocaleString('es-MX');
+  }
+  saveInvitesRec(invites);
+  // ── FIX: también marcar como usado en el lookup global ──
+  try{
+    const lookup = JSON.parse(_lgi('medbc_invite_lookup')||'{}');
+    if(lookup[codeUp]) lookup[codeUp].usado = true;
+    _lsi('medbc_invite_lookup', JSON.stringify(lookup));
+  }catch(e){ console.error('lookup rec usado error', e); }
+  // Re-render por si el modal ya está abierto
+  renderInviteListRecepcion();
 }
 </script>
 
@@ -20237,6 +20782,8 @@ function mtIndexSave(obj){ localStorage.setItem(MT_INDEX_KEY, JSON.stringify(obj
 
 // grupoId activo en esta sesión (se fija al elegir clínica o al login)
 let _gid = null;
+// Exponer _gid globalmente para acceso desde otros scripts
+Object.defineProperty(window, '_gid', { get: ()=>_gid, set: v=>{ _gid=v; } });
 
 // ════════════════════════════════════════════════════════════
 // 2. TODAS LAS CLAVES QUE SE PREFIJAN POR GRUPO
@@ -20284,6 +20831,8 @@ LS.del = (k)   => _LSd(_k(k));
 const _lgi = localStorage.getItem.bind(localStorage);
 const _lsi = localStorage.setItem.bind(localStorage);
 const _lri = localStorage.removeItem.bind(localStorage);
+window._lgi = _lgi;
+window._lsi = _lsi;
 localStorage.getItem    = k      => _lgi(CLAVES_GRUPO.has(k) ? _k(k) : k);
 localStorage.setItem    = (k,v)  => _lsi(CLAVES_GRUPO.has(k) ? _k(k) : k, v);
 localStorage.removeItem = k      => _lri(CLAVES_GRUPO.has(k) ? _k(k) : k);
@@ -20298,7 +20847,7 @@ window.mtActivarGrupo = function(gid){
   CLAVES_GRUPO.forEach(k => { delete _lsCache[k]; }); // limpiar caché vieja
   console.log('🏥 Clínica activa:', gid);
   // 🔐 NOM-004: activar cifrado del grupo
-  if(typeof cryptoActivarGrupo === 'function') cryptoActivarGrupo(gid).catch(()=>{});
+  if(typeof cryptoActivarGrupo === 'function') window._cryptoReady = cryptoActivarGrupo(gid).catch(()=>{}); // FIX: guardar Promise
 };
 
 window.mtDesactivarGrupo = function(){
@@ -20579,6 +21128,8 @@ window.addUsuario = async function(){
 // ════════════════════════════════════════════════════════════
 function _postLogin(){
   if(!sessionUser) return;
+  // Filtrar pestañas de Historia Clínica según rol y especialidad
+  setTimeout(filtrarTabsSegunRol, 100);
   // Si por alguna razón no hay gid, intentar derivarlo del admin
   if(!_gid){
     try{
@@ -20793,9 +21344,53 @@ window.renderUsrList = function(){
 // ════════════════════════════════════════════════════════════
 // Reemplazar el arranque original (que llama regVerificar)
 // El regVerificar parchado ya maneja el flujo completo.
+
+// Busca en todos los grupos el código de invitación (médico o recepción)
+// Retorna { gid, idx, tipo } o null
+window.buscarInviteEnTodosGrupos = function buscarInviteEnTodosGrupos(code){
+  const codeUp = code.toUpperCase().trim();
+  try{
+    const rawLookup = (typeof _lgi === 'function' ? _lgi : window._lgi)('medbc_invite_lookup');
+    const lookup = JSON.parse(rawLookup||'{}');
+    const entry = lookup[codeUp];
+    if(entry && entry.gid && !entry.usado) return entry; // FIX: rechazar ya usados
+  }catch(e){ console.error('buscar invite error', e); }
+  return null;
+}
+
 console.log('✅ Multi-tenancy v2 cargado — MedBC Pro');
 console.log('   Clínicas en este dispositivo:', Object.keys(mtIndexGet()).length);
 
 })();
+</script>
+
+<!-- ══ Configuración Supabase ══ -->
+<script>
+function abrirConfigSupabase(){
+  const modal = document.getElementById('supabase-config-modal');
+  modal.style.display = 'flex';
+  document.getElementById('sb-url-input').value = localStorage.getItem('sb_url')||'';
+  document.getElementById('sb-key-input').value = localStorage.getItem('sb_key')||'';
+}
+function cerrarConfigSupabase(){
+  document.getElementById('supabase-config-modal').style.display = 'none';
+}
+function guardarConfigSupabase(){
+  const url = document.getElementById('sb-url-input').value.trim();
+  const key = document.getElementById('sb-key-input').value.trim();
+  if(!url||!key){ alert('Completa los dos campos'); return; }
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  document.getElementById('supabase-config-btn').style.display = 'none';
+  cerrarConfigSupabase();
+  alert('✅ Supabase configurado correctamente. Recarga la app para conectar.');
+}
+// Al cargar: si ya tiene Supabase configurado, ocultar el ícono
+window.addEventListener('load', ()=>{
+  if(localStorage.getItem('sb_url') && localStorage.getItem('sb_key')){
+    const btn = document.getElementById('supabase-config-btn');
+    if(btn) btn.style.display = 'none';
+  }
+});
 </script>
 </body>
