@@ -866,6 +866,39 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
 <div id="login-screen">
 
 <!-- ── Ícono configuración Supabase ── -->
+<!-- BADGE LICENCIA — esquina inferior izquierda -->
+<div id="license-badge" onclick="abrirLicencia()" title="Estado de licencia" style="position:fixed;bottom:20px;left:20px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.55);border:2px solid rgba(0,217,126,0.4);border-radius:50%;cursor:pointer;z-index:9999;backdrop-filter:blur(8px);transition:all .3s;user-select:none;font-size:20px" id="license-badge">
+  <span id="license-icon">🔒</span>
+</div>
+
+<!-- OVERLAY BLOQUEADOR -->
+<div id="license-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9990;backdrop-filter:blur(3px);display:none;pointer-events:none"></div>
+
+<!-- POPUP DE LICENCIA -->
+<div id="license-popup" style="position:fixed;bottom:74px;left:20px;background:#161b27;border:1px solid #2a3350;border-radius:16px;padding:20px;width:290px;max-width:92vw;z-index:99999;display:none;box-shadow:0 8px 32px rgba(0,0,0,0.6)">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+    <span id="popup-icon" style="font-size:24px">🔒</span>
+    <div>
+      <div style="color:#fff;font-weight:700;font-size:14px">MedBC Pro</div>
+      <div style="font-size:11px;margin-top:2px" id="popup-msg">Verificando licencia...</div>
+    </div>
+  </div>
+  <div id="popup-details" style="background:#0d1120;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#aaa;display:none"></div>
+  <div style="position:relative;margin-bottom:8px">
+    <input id="ls-key-input" placeholder="MEDBC-XXXX-XXXX-XXXX" maxlength="24"
+      style="width:100%;background:#0d1120;border:1px solid #2a3350;border-radius:8px;padding:9px 36px 9px 12px;color:#a78bfa;font-family:monospace;font-size:12px;letter-spacing:2px;text-transform:uppercase;outline:none;text-align:center;box-sizing:border-box"
+      oninput="this.value=this.value.toUpperCase();this.removeAttribute('data-masked')" onkeydown="if(event.key==='Enter')activarLicencia()">
+    <button onclick="toggleMostrarClave()" id="ls-toggle-btn" title="Mostrar/ocultar clave"
+      style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#666;font-size:14px;padding:2px">👁</button>
+  </div>
+  <div id="ls-error" style="color:#ff4d6d;font-size:11px;min-height:14px;margin-bottom:8px"></div>
+  <button onclick="activarLicencia()" id="ls-btn"
+    style="width:100%;padding:9px;background:linear-gradient(135deg,#a78bfa,#6d28d9);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer">
+    Activar
+  </button>
+  <div id="ls-offline-note" style="display:none;color:#ffd166;font-size:11px;margin-top:10px;text-align:center">⚠ Sin conexión — usando datos guardados</div>
+</div>
+
 <div id="supabase-config-btn" onclick="abrirConfigSupabase()" style="position:fixed;bottom:20px;right:20px;width:36px;height:36px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:9999;font-size:16px;transition:all .2s" title="Configurar Supabase">⚙️</div>
 
 <!-- ── Modal configuración Supabase ── -->
@@ -1237,7 +1270,7 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
 <!-- TOP BAR -->
 <div id="top">
   <button id="hamburger-btn" onclick="toggleMobileSidebar()" style="display:none;background:none;border:none;color:var(--so);font-size:20px;cursor:pointer;padding:4px 8px;border-radius:8px;flex-shrink:0;align-items:center;justify-content:center" title="Menú">☰</button>
-  <div><div class="logo">🏥 MedBC Pro</div><div class="ver" id="ver-badge">v13 · GPC CENETEC · 956 CIE-10 · Expediente + Nube</div></div>
+  <div><div class="logo">🏥 MedBC Pro <span id="demo-logo-badge" style="display:none;font-size:10px;font-weight:700;background:rgba(100,180,255,0.15);color:#64b4ff;border:1px solid rgba(100,180,255,0.4);border-radius:6px;padding:1px 7px;vertical-align:middle;letter-spacing:.5px">DEMO</span></div><div class="ver" id="ver-badge">v13 · GPC CENETEC · 956 CIE-10 · Expediente + Nube</div></div>
   <div class="sp"></div>
   <input id="gsearch" placeholder="🔍 Buscar enfermedad, medicamento, CIE-10..." oninput="gSearch(this.value)">
   <div class="tbadge" id="clock">⏰ --:--</div>
@@ -2403,8 +2436,8 @@ html.light-mode #cita-modal>div{background:var(--sf)!important}
     <div class="ps" id="hc-esp-label">Especialidad cargada desde Configuración</div>
   </div>
 
-  <!-- SELECTOR DE ESPECIALIDAD -->
-  <div id="hc-esp-selector" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+  <!-- SELECTOR DE ESPECIALIDAD — oculto, se controla desde Configuración -->
+  <div id="hc-esp-selector" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
     <span style="font-size:12px;color:var(--so);font-weight:600">Especialidad:</span>
     <button class="pill" id="hc-btn-general"   onclick="setHCEsp('general')"   style="font-size:12px">🏥 General</button>
     <button class="pill" id="hc-btn-gineco"    onclick="setHCEsp('gineco')"    style="font-size:12px">🌸 Ginecología</button>
@@ -4716,7 +4749,17 @@ function toggleDxClin(inpId, listId) {
       <label style="font-size:12px;color:var(--so)">Nombre completo</label>
       <input class="inp" id="md-nombre" placeholder="Dr. Nombre Apellido">
       <label style="font-size:12px;color:var(--so)">Especialidad</label>
-      <input class="inp" id="md-esp" placeholder="Medicina General">
+      <select class="inp" id="md-esp" onchange="cfg.esp=this.value;cfg.hcEsp=({'Medicina General':'general','Ginecología / Obstetricia':'gineco','Pediatría':'pediatria','Urgencias':'urgencias','Cardiología':'cardio','Traumatología / Ortopedia':'traumato','Dermatología':'dermato','Oftalmología':'oftalmologia','Psiquiatría':'psiquiatria'})[this.value]||'general';sincronizarSelectsEsp();persistCfg();initHCEsp();guardarMisDatos()">
+        <option value="Medicina General">🏥 Medicina General</option>
+        <option value="Ginecología / Obstetricia">🌸 Ginecología / Obstetricia</option>
+        <option value="Pediatría">👶 Pediatría</option>
+        <option value="Urgencias">🚨 Urgencias</option>
+        <option value="Cardiología">❤️ Cardiología</option>
+        <option value="Traumatología / Ortopedia">🦴 Traumatología / Ortopedia</option>
+        <option value="Dermatología">🩹 Dermatología</option>
+        <option value="Oftalmología">👁️ Oftalmología</option>
+        <option value="Psiquiatría">🧠 Psiquiatría</option>
+      </select>
       <label style="font-size:12px;color:var(--so)">Sub-especialidad</label>
       <input class="inp" id="md-subesp" placeholder="Opcional">
       <label style="font-size:12px;color:var(--so)">Cédula profesional</label>
@@ -5068,25 +5111,33 @@ function toggleDxClin(inpId, listId) {
       <div class="fr">
         <div class="fg"><label class="lbl">Nombre completo</label><input class="inp" id="cfg-nombre" oninput="autoSaveCfg()"></div>
         <div class="fg"><label class="lbl">Cédula profesional</label><input class="inp" id="cfg-cedula" oninput="autoSaveCfg()"></div>
-        <div class="fg"><label class="lbl">Especialidad</label><input class="inp" id="cfg-esp" oninput="autoSaveCfg()"></div>
+        <div class="fg"><label class="lbl">🩺 Especialidad — define el formulario de Historia Clínica</label>
+          <select class="inp" id="cfg-esp" onchange="cfg.esp=this.value;cfg.hcEsp=({'Medicina General':'general','Ginecología / Obstetricia':'gineco','Pediatría':'pediatria','Urgencias':'urgencias','Cardiología':'cardio','Traumatología / Ortopedia':'traumato','Dermatología':'dermato','Oftalmología':'oftalmologia','Psiquiatría':'psiquiatria'})[this.value]||'general';sincronizarSelectsEsp();persistCfg();initHCEsp();autoSaveCfg()">
+            <option value="Medicina General">🏥 Medicina General</option>
+            <option value="Ginecología / Obstetricia">🌸 Ginecología / Obstetricia</option>
+            <option value="Pediatría">👶 Pediatría</option>
+            <option value="Urgencias">🚨 Urgencias</option>
+            <option value="Cardiología">❤️ Cardiología</option>
+            <option value="Traumatología / Ortopedia">🦴 Traumatología / Ortopedia</option>
+            <option value="Dermatología">🩹 Dermatología</option>
+            <option value="Oftalmología">👁️ Oftalmología</option>
+            <option value="Psiquiatría">🧠 Psiquiatría</option>
+          </select></div>
         <div class="fg"><label class="lbl">Sub-especialidad</label><input class="inp" id="cfg-subesp" oninput="autoSaveCfg()"></div>
         <div class="fg"><label class="lbl">Cédula especialidad</label><input class="inp" id="cfg-ced-esp" oninput="autoSaveCfg()"></div>
         <div class="fg"><label class="lbl">Universidad / Institución</label><input class="inp" id="cfg-uni" oninput="autoSaveCfg()"></div>
-        <div class="fg" style="grid-column:span 2">
-          <label class="lbl">🩺 Especialidad para Historia Clínica — define el formulario predeterminado</label>
-          <select class="inp" id="cfg-hc-esp" onchange="cfg.hcEsp=this.value;persistCfg();initHCEsp();toast('✓ Especialidad HC actualizada')">
-            <option value="general">🏥 Medicina General</option>
-            <option value="gineco">🌸 Ginecología / Obstetricia</option>
-            <option value="pediatria">👶 Pediatría</option>
-            <option value="urgencias">🚨 Urgencias</option>
-            <option value="cardio">❤️ Cardiología</option>
-            <option value="traumato">🦴 Traumatología / Ortopedia</option>
-            <option value="dermato">🩹 Dermatología</option>
-            <option value="oftalmologia">👁️ Oftalmología</option>
-            <option value="psiquiatria">🧠 Psiquiatría</option>
-          </select>
-          <div style="font-size:11px;color:var(--so);margin-top:4px">Puedes cambiarla manualmente en cualquier momento desde la Historia Clínica.</div>
-        </div>
+        <!-- Select oculto cfg-hc-esp — necesario para sincronizarSelectsEsp(), no visible al usuario -->
+        <select id="cfg-hc-esp" style="display:none" onchange="cfg.hcEsp=this.value;sincronizarSelectsEsp();persistCfg();initHCEsp()">
+          <option value="general">Medicina General</option>
+          <option value="gineco">Ginecología / Obstetricia</option>
+          <option value="pediatria">Pediatría</option>
+          <option value="urgencias">Urgencias</option>
+          <option value="cardio">Cardiología</option>
+          <option value="traumato">Traumatología / Ortopedia</option>
+          <option value="dermato">Dermatología</option>
+          <option value="oftalmologia">Oftalmología</option>
+          <option value="psiquiatria">Psiquiatría</option>
+        </select>
         <div class="fg"><label class="lbl">Nombre del consultorio</label><input class="inp" id="cfg-clinica" oninput="autoSaveCfg()"></div>
         <div class="fg"><label class="lbl">Teléfono</label><input class="inp" id="cfg-tel" oninput="autoSaveCfg()"></div>
         <div class="fg" style="grid-column:span 2"><label class="lbl">Dirección del consultorio</label><input class="inp" id="cfg-dir" oninput="autoSaveCfg()"></div>
@@ -10381,6 +10432,111 @@ function exportSoloExpedientes(){
 // CONFIGURACIÓN
 // ══════════════════════════════════════════════════════════
 let cfgTimer=null;
+function syncMdEspSelect(){
+  // Sincroniza cfg.esp hacia el select de Mis Datos (md-esp)
+  const sel = document.getElementById('md-esp');
+  if(!sel) return;
+  let matched = false;
+  for(let i=0; i<sel.options.length; i++){
+    if(sel.options[i].value === cfg.esp){ sel.selectedIndex=i; matched=true; break; }
+  }
+  if(!matched && cfg.esp){
+    const esp = cfg.esp.toLowerCase();
+    const km = [['ginecolog','Ginecología / Obstetricia'],['obstetr','Ginecología / Obstetricia'],
+      ['pediatr','Pediatría'],['urgencia','Urgencias'],['emergencia','Urgencias'],
+      ['cardiol','Cardiología'],['traumat','Traumatología / Ortopedia'],['ortop','Traumatología / Ortopedia'],
+      ['dermatol','Dermatología'],['oftalmol','Oftalmología'],['psiquiatr','Psiquiatría'],['psicol','Psiquiatría']];
+    for(const [k,v] of km){
+      if(esp.includes(k)){
+        for(let i=0; i<sel.options.length; i++){
+          if(sel.options[i].value===v){ sel.selectedIndex=i; matched=true; break; }
+        }
+        break;
+      }
+    }
+  }
+  if(!matched) sel.value='Medicina General';
+}
+function sincronizarSelectsEsp(){
+  // Tabla de conversión completa entre los tres selects
+  const keyToNombre = {
+    'general':      'Medicina General',
+    'gineco':       'Ginecología / Obstetricia',
+    'pediatria':    'Pediatría',
+    'urgencias':    'Urgencias',
+    'cardio':       'Cardiología',
+    'traumato':     'Traumatología / Ortopedia',
+    'dermato':      'Dermatología',
+    'oftalmologia': 'Oftalmología',
+    'psiquiatria':  'Psiquiatría',
+  };
+  const nombreToKey = {};
+  Object.entries(keyToNombre).forEach(([k,v])=>{ nombreToKey[v]=k; });
+
+  // Determinar la fuente de verdad: preferir cfg.hcEsp, luego derivar desde cfg.esp
+  let key = cfg.hcEsp || 'general';
+  // Si cfg.esp tiene un nombre reconocido y cfg.hcEsp es solo 'general', derivar desde cfg.esp
+  if((key === 'general') && cfg.esp && nombreToKey[cfg.esp]){
+    key = nombreToKey[cfg.esp];
+  }
+  const nombre = keyToNombre[key] || 'Medicina General';
+
+  // Aplicar a los tres selects
+  const selCfgEsp = document.getElementById('cfg-esp');
+  if(selCfgEsp) selCfgEsp.value = nombre;
+
+  const selHcEsp = document.getElementById('cfg-hc-esp');
+  if(selHcEsp) selHcEsp.value = key;
+
+  const selMdEsp = document.getElementById('md-esp');
+  if(selMdEsp) selMdEsp.value = nombre;
+
+  // Actualizar cfg en memoria
+  cfg.esp    = nombre;
+  cfg.hcEsp  = key;
+}
+function syncHCEspToCfgEsp(){
+  // Mapeo inverso: key de cfg-hc-esp → valor del select cfg-esp
+  const keyToNombre = {
+    'general':      'Medicina General',
+    'gineco':       'Ginecología / Obstetricia',
+    'pediatria':    'Pediatría',
+    'urgencias':    'Urgencias',
+    'cardio':       'Cardiología',
+    'traumato':     'Traumatología / Ortopedia',
+    'dermato':      'Dermatología',
+    'oftalmologia': 'Oftalmología',
+    'psiquiatria':  'Psiquiatría',
+  };
+  const hcSel = document.getElementById('cfg-hc-esp');
+  const espSel = document.getElementById('cfg-esp');
+  if(!hcSel || !espSel) return;
+  const nombre = keyToNombre[hcSel.value] || 'Medicina General';
+  espSel.value = nombre;
+  cfg.esp = nombre;
+}
+function syncEspHC() {
+  // Mapeo directo de valor del select cfg-esp → key de cfg-hc-esp
+  const espMap = {
+    'Medicina General':          'general',
+    'Ginecología / Obstetricia': 'gineco',
+    'Pediatría':                 'pediatria',
+    'Urgencias':                 'urgencias',
+    'Cardiología':               'cardio',
+    'Traumatología / Ortopedia': 'traumato',
+    'Dermatología':              'dermato',
+    'Oftalmología':              'oftalmologia',
+    'Psiquiatría':               'psiquiatria',
+  };
+  const val = document.getElementById('cfg-esp')?.value || '';
+  const sel = document.getElementById('cfg-hc-esp');
+  if (!sel) return;
+  const found = espMap[val] || 'general';
+  sel.value = found;
+  cfg.hcEsp = found;
+  persistCfg();
+  if(typeof initHCEsp === 'function') initHCEsp();
+}
 function autoSaveCfg(){
   clearTimeout(cfgTimer);
   cfgTimer=setTimeout(()=>{saveCfg(true);},800);
@@ -10438,11 +10594,14 @@ function saveCfg(silent=false){
     fontSize:document.getElementById('cfg-font-size')?.value||'14',
     autoLogout:(()=>{ const el=document.getElementById('cfg-autoLogout'); return el ? el.value : (cfg.autoLogout||'15'); })(),
     firma:cfg.firma||null,
+    hcEsp:document.getElementById('cfg-hc-esp')?.value || cfg.hcEsp || 'general',
   };
   // Guardar sin contaminar cfg global cuando hay usuario activo
   persistCfg();
   // Sync fmt fields
   loadFmtFromCfg();
+  // Sincronizar especialidad hacia Mis Datos (select)
+  syncMdEspSelect();
   if(!silent){
     toast('✓ Configuración guardada');
     const ind=document.getElementById('cfg-saved-indicator');
@@ -10458,6 +10617,8 @@ function loadCfgIntoForm(){
     'cfg-footer':'rxFooter','cfg-rxfont':'rxFont'
   };
   Object.entries(m).forEach(([id,key])=>{const el=document.getElementById(id);if(el&&cfg[key])el.value=cfg[key];});
+  // Sincronizar ambos selects de especialidad desde cfg.hcEsp (fuente de verdad única)
+  sincronizarSelectsEsp();
   if(cfg.rxColor){const el=document.getElementById('cfg-color');if(el)el.value=cfg.rxColor;}
   if(cfg.certColor){const el=document.getElementById('cfg-color-cert');if(el)el.value=cfg.certColor;}
   if(cfg.fechaColor){const el=document.getElementById('cfg-color-fecha');if(el)el.value=cfg.fechaColor;}
@@ -10465,7 +10626,7 @@ function loadCfgIntoForm(){
   if(cfg.icon){const el=document.getElementById('cfg-icon');if(el)el.value=cfg.icon;}
   if(cfg.autoLogout!==undefined){const el=document.getElementById('cfg-autoLogout');if(el)el.value=cfg.autoLogout;}
   if(cfg.fontSize){const el=document.getElementById('cfg-font-size');if(el)el.value=cfg.fontSize;}
-  if(cfg.hcEsp){const el=document.getElementById('cfg-hc-esp');if(el)el.value=cfg.hcEsp;}
+  // cfg-hc-esp ya lo maneja sincronizarSelectsEsp()
   const bools={
     'cfg-abx':'rxAbx','cfg-rxnum':'rxNum','cfg-auto':'doAuto',
     'cfg-sync':'doSync','cfg-log':'doLog','cfg-ev':'doEv','cfg-ia':'iaEnabled'
@@ -10496,6 +10657,8 @@ function loadCfgIntoForm(){
   if(cfg.fontSize)setFontSize(cfg.fontSize);
   // Sincronizar campos de formato de receta (fmt-*) tras un tick para asegurar DOM
   setTimeout(()=>loadFmtFromCfg(), 100);
+  // Sincronizar los tres selects de especialidad
+  sincronizarSelectsEsp();
 }
 function updateSysStats(){
   const el=document.getElementById('sys-stats');
@@ -11401,7 +11564,7 @@ function setHCEsp(esp, save=true){
   // Actualizar label del subtítulo
   const info = HC_ESPS[esp] || HC_ESPS.general;
   const lbl = document.getElementById('hc-esp-label');
-  if(lbl) lbl.textContent = info.label + ' · Datos sincronizados a Receta y Certificado';
+  if(lbl) lbl.textContent = info.label + ' · Para cambiar la especialidad ve a Configuración';
   // Guardar preferencia
   if(save){
     cfg.hcEsp = esp;
@@ -11412,7 +11575,27 @@ function setHCEsp(esp, save=true){
 }
 
 function initHCEsp(){
-  const esp = cfg.hcEsp || cfg.esp_key || 'general';
+  // Primero intentar mapear desde la especialidad del médico (cfg.esp)
+  const espMap = {
+    'ginecolog': 'gineco', 'obstetr': 'gineco',
+    'pediatr': 'pediatria',
+    'urgencia': 'urgencias', 'emergencia': 'urgencias',
+    'cardiol': 'cardio',
+    'traumat': 'traumato', 'ortop': 'traumato',
+    'dermatol': 'dermato',
+    'oftalmol': 'oftalmologia',
+    'psiquiatr': 'psiquiatria', 'psicol': 'psiquiatria',
+  };
+  const espRegistrada = (cfg.esp||'').toLowerCase();
+  let espFromMedico = null;
+  for(const [k,v] of Object.entries(espMap)){
+    if(espRegistrada.includes(k)){ espFromMedico = v; break; }
+  }
+  // Si hay especialidad mapeada del médico, usarla; si no, usar cfg.hcEsp
+  const esp = espFromMedico || cfg.hcEsp || cfg.esp_key || 'general';
+  // Sincronizar el selector de HC en Configuración
+  const selHC = document.getElementById('cfg-hc-esp');
+  if(selHC && espFromMedico) selHC.value = espFromMedico;
   setHCEsp(esp, false);
   hcgActualizarBloques();
   setTimeout(()=>{
@@ -11840,7 +12023,7 @@ async function mdCambiarPassword(){
 // ══════════════════════════════════════════════════════════
 function cargarMisDatos(){
   document.getElementById('md-nombre').value  = cfg.nombre  || '';
-  document.getElementById('md-esp').value     = cfg.esp     || '';
+  sincronizarSelectsEsp(); // sincroniza los tres selects
   document.getElementById('md-subesp').value  = cfg.subesp  || '';
   document.getElementById('md-cedula').value  = cfg.cedula  || '';
   document.getElementById('md-ced-esp').value = cfg.ced_esp || '';
@@ -11870,7 +12053,7 @@ function cargarMisDatos(){
 }
 function guardarMisDatos(){
   cfg.nombre  = document.getElementById('md-nombre').value.trim();
-  cfg.esp     = document.getElementById('md-esp').value.trim();
+  cfg.esp     = document.getElementById('md-esp').value; // valor del select
   cfg.subesp  = document.getElementById('md-subesp').value.trim();
   cfg.cedula  = document.getElementById('md-cedula').value.trim();
   cfg.ced_esp = document.getElementById('md-ced-esp').value.trim();
@@ -11878,6 +12061,10 @@ function guardarMisDatos(){
   cfg.tel     = document.getElementById('md-tel').value.trim();
   cfg.dir     = document.getElementById('md-dir').value.trim();
   cfg.uni     = document.getElementById('md-uni').value.trim();
+  // Sincronizar hacia Configuración: input de texto y selector de HC
+  const cfgEspEl = document.getElementById('cfg-esp');
+  if(cfgEspEl) cfgEspEl.value = cfg.esp;
+  syncEspHC(); // actualiza cfg-hc-esp y cfg.hcEsp según el texto
   persistCfg();
   loadCfgIntoForm();
   setTimeout(()=>loadFmtFromCfg(), 50);
@@ -11905,6 +12092,7 @@ function loginContinuar(){
       if(cfgAdmin.iaEnabled !== undefined) cfg.iaEnabled = cfgAdmin.iaEnabled;
       if(cfgAdmin.anthropicKey) cfg.anthropicKey = cfgAdmin.anthropicKey;
       if(cfgAdmin.geminiKey) cfg.geminiKey = cfgAdmin.geminiKey;
+      if(cfgAdmin.hcEsp) cfg.hcEsp = cfgAdmin.hcEsp;
     }
   }
   loadCfgIntoForm();
@@ -12392,6 +12580,7 @@ function doLogin(){
           if(cfgAdmin.anthropicKey) cfg.anthropicKey = cfgAdmin.anthropicKey;
           if(cfgAdmin.geminiKey) cfg.geminiKey = cfgAdmin.geminiKey;
         }
+          if(cfgAdmin.hcEsp) cfg.hcEsp = cfgAdmin.hcEsp;
       }
       loadCfgIntoForm();
       setTimeout(()=>{ initLogoFromCfg(); loadFmtFromCfg(); }, 100);
@@ -21385,12 +21574,289 @@ function guardarConfigSupabase(){
   cerrarConfigSupabase();
   alert('✅ Supabase configurado correctamente. Recarga la app para conectar.');
 }
-// Al cargar: si ya tiene Supabase configurado, ocultar el ícono
-window.addEventListener('load', ()=>{
+// ══════════════════════════════════════════════════════════
+// SISTEMA DE LICENCIAS MEDBC
+// ══════════════════════════════════════════════════════════
+const LIC_SUPABASE_URL = "https://euebntbodelaabkfzmou.supabase.co";
+const LIC_SUPABASE_KEY = "sb_publishable_W--WLgrdkbwtLqz8cLvfdg_b7AHcYy9";
+const LIC_STORAGE_KEY  = "medbc_license";
+const LIC_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hora
+
+let licenseTimer = null;
+
+async function verificarLicencia(key) {
+  const res = await fetch(`${LIC_SUPABASE_URL}/rest/v1/licenses?key=eq.${encodeURIComponent(key)}&select=*`, {
+    headers: {
+      'apikey': LIC_SUPABASE_KEY,
+      'Authorization': `Bearer ${LIC_SUPABASE_KEY}`
+    }
+  });
+  if (!res.ok) throw new Error('Error de red');
+  const data = await res.json();
+  if (!data.length) throw new Error('Clave no encontrada');
+  return data[0];
+}
+
+// ── Genera o recupera un ID único para este dispositivo/navegador ──
+function getDeviceId() {
+  let id = localStorage.getItem('medbc_device_id');
+  if (!id) {
+    id = 'dev-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+    localStorage.setItem('medbc_device_id', id);
+  }
+  return id;
+}
+
+// ── Registra este dispositivo en Supabase al activar la licencia ──
+async function registrarDispositivo(lic) {
+  try {
+    const deviceId = getDeviceId();
+    const activations = Array.isArray(lic.activations) ? lic.activations : [];
+
+    // Si ya está registrado, no hacer nada
+    if (activations.includes(deviceId)) return;
+
+    // Verificar que no se exceda el límite
+    const maxDevices = lic.max_users || lic.max_devices || 3;
+    if (activations.length >= maxDevices) {
+      console.warn('Límite de dispositivos alcanzado');
+      return;
+    }
+
+    const nuevasActivations = [...activations, deviceId];
+
+    await fetch(`${LIC_SUPABASE_URL}/rest/v1/licenses?id=eq.${lic.id}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': LIC_SUPABASE_KEY,
+        'Authorization': `Bearer ${LIC_SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        activations: nuevasActivations,
+        devices_used: nuevasActivations.length
+      })
+    });
+  } catch(e) {
+    console.warn('No se pudo registrar el dispositivo:', e);
+  }
+}
+
+function guardarLicenciaLocal(lic) {
+  localStorage.setItem(LIC_STORAGE_KEY, JSON.stringify({
+    key: lic.key,
+    status: lic.status,
+    plan: lic.plan,
+    expires_at: lic.expires_at,
+    clinic_name: lic.clinic_name,
+    last_check: Date.now()
+  }));
+}
+
+function cargarLicenciaLocal() {
+  const s = localStorage.getItem(LIC_STORAGE_KEY);
+  return s ? JSON.parse(s) : null;
+}
+
+function diasRestantes(expires_at) {
+  if (!expires_at) return null;
+  return Math.ceil((new Date(expires_at) - new Date()) / (1000*60*60*24));
+}
+
+function aplicarEstadoLicencia(lic, offline = false) {
+  const badge   = document.getElementById('license-badge');
+  const icon    = document.getElementById('license-icon');
+  const overlay = document.getElementById('license-overlay');
+  const popup   = document.getElementById('license-popup');
+  const details = document.getElementById('popup-details');
+
+  const activa     = lic.status === 'active';
+  const dias       = diasRestantes(lic.expires_at);
+  const vencida    = activa && dias !== null && dias < 0;
+  const proxima    = activa && dias !== null && dias <= 30 && dias >= 0;
+  const esvitalicio = !lic.expires_at || lic.plan === 'lifetime';
+  const esdemo     = lic.plan === 'demo';
+
+  if (activa && !vencida) {
+    overlay.style.display = 'none';
+    overlay.style.pointerEvents = 'none';
+    popup.style.display   = 'none';
+
+    if (offline) {
+      icon.textContent = '🔒';
+      badge.style.borderColor = 'rgba(255,209,102,0.6)';
+      badge.style.background  = 'rgba(255,209,102,0.12)';
+      badge.style.filter = 'drop-shadow(0 0 6px rgba(255,209,102,0.4))';
+      if(details) { details.innerHTML = `<span style="color:#ffd166">⚠ Sin conexión</span><br>Usando datos guardados localmente`; details.style.display='block'; }
+    } else if (esdemo) {
+      // ── Modo Demo ──
+      icon.textContent = '🔓';
+      badge.style.borderColor = 'rgba(100,180,255,0.6)';
+      badge.style.background  = 'rgba(100,180,255,0.10)';
+      badge.style.filter = 'drop-shadow(0 0 6px rgba(100,180,255,0.4))';
+      if(details) {
+        const diasDemo = dias !== null ? ` · ${dias} días restantes` : '';
+        details.innerHTML = `<span style="color:#64b4ff">🔓 Versión Demo${diasDemo}</span><br>${lic.clinic_name||''}<br><span style="font-size:10px;color:#8ab4d4">Contacta a tu proveedor para activar</span>`;
+        details.style.display='block';
+      }
+      // Badge inline junto al logo — sin ocupar espacio extra
+      const demoBadge = document.getElementById('demo-logo-badge');
+      if(demoBadge) demoBadge.style.display = 'inline';
+    } else if (proxima) {
+      icon.textContent = '⚠️';
+      badge.style.borderColor = 'rgba(255,209,102,0.6)';
+      badge.style.background  = 'rgba(255,209,102,0.12)';
+      badge.style.filter = 'drop-shadow(0 0 6px rgba(255,209,102,0.4))';
+      if(details) { details.innerHTML = `<span style="color:#ffd166">⚠ Vence en ${dias} días</span><br>${lic.clinic_name||''}<br>Plan: ${lic.plan}`; details.style.display='block'; }
+    } else {
+      icon.textContent = '🔒';
+      badge.style.borderColor = 'rgba(0,217,126,0.5)';
+      badge.style.background  = 'rgba(0,217,126,0.1)';
+      badge.style.filter = 'drop-shadow(0 0 6px rgba(0,217,126,0.3))';
+      if(details) { details.innerHTML = esvitalicio
+        ? `<span style="color:#00d97e">✓ Licencia Vitalicia</span><br>${lic.clinic_name||''}`
+        : `<span style="color:#00d97e">✓ Activa — ${dias} días restantes</span><br>${lic.clinic_name||''}<br>Vence: ${lic.expires_at?.split('T')[0]||''}`;
+        details.style.display='block'; }
+    }
+    const pmsg = document.getElementById('popup-msg');
+    const picon = document.getElementById('popup-icon');
+    if(picon) picon.textContent = icon.textContent;
+    if(pmsg) {
+      pmsg.textContent = esdemo ? '🔓 Versión Demo' : esvitalicio ? '✓ Vitalicio' : proxima ? `⚠ Vence en ${dias} días` : offline ? 'Sin conexión' : `✓ ${dias} días restantes`;
+      pmsg.style.color = esdemo ? '#64b4ff' : proxima||offline ? '#ffd166' : '#00d97e';
+    }
+    // Si ya no es demo, ocultar el badge DEMO del logo
+    const demoBadge = document.getElementById('demo-logo-badge');
+    if(demoBadge) demoBadge.style.display = esdemo ? 'inline' : 'none';
+  } else {
+    overlay.style.display = 'block';
+    overlay.style.pointerEvents = 'all';
+    popup.style.display   = 'block';
+    icon.textContent = '🔴';
+    badge.style.borderColor = 'rgba(255,77,109,0.6)';
+    badge.style.background  = 'rgba(255,77,109,0.12)';
+    badge.style.filter = 'drop-shadow(0 0 6px rgba(255,77,109,0.4))';
+    if(details) { details.innerHTML = `<span style="color:#ff4d6d">✗ Licencia vencida o revocada</span><br>Contacta a tu proveedor`; details.style.display='block'; }
+    const picon = document.getElementById('popup-icon');
+    const pmsg  = document.getElementById('popup-msg');
+    if(picon) picon.textContent = '🔴';
+    if(pmsg)  { pmsg.textContent = 'Licencia vencida — ingresa nueva clave'; pmsg.style.color = '#ff4d6d'; }
+  }
+}
+
+async function activarLicencia() {
+  const inp = document.getElementById('ls-key-input');
+  // Si el campo tiene clave enmascarada, usar la real guardada en data-real-key
+  const key = (inp.getAttribute('data-masked') === 'true' && inp.getAttribute('data-real-key'))
+    ? inp.getAttribute('data-real-key')
+    : inp.value.trim().toUpperCase();
+  const err = document.getElementById('ls-error');
+  const btn = document.getElementById('ls-btn');
+  if (!key) { err.textContent = 'Ingresa la clave'; return; }
+  err.textContent = '';
+  btn.textContent = 'Verificando...'; btn.disabled = true;
+  try {
+    const lic = await verificarLicencia(key);
+    guardarLicenciaLocal(lic);
+    aplicarEstadoLicencia(lic);
+    iniciarVerificacionPeriodica();
+    registrarDispositivo(lic); // registra este dispositivo en Supabase
+  } catch(e) {
+    err.textContent = e.message === 'Clave no encontrada' ? 'Clave inválida o no existe' : 'Error de conexión. Intenta de nuevo.';
+  } finally {
+    btn.textContent = 'Activar'; btn.disabled = false;
+  }
+}
+
+function enmascararClave(key) {
+  // Muestra solo el primer segmento y el primer carácter del segundo, el resto asteriscos
+  // MEDBC-P0626-Z9BC-3JWM → MEDBC-P****-****-****
+  if (!key) return '';
+  const parts = key.split('-');
+  return parts.map((p, i) => {
+    if (i === 0) return p; // "MEDBC" completo
+    if (i === 1) return p[0] + '*'.repeat(p.length - 1); // primer char + asteriscos
+    return '*'.repeat(p.length); // resto todo asteriscos
+  }).join('-');
+}
+
+function toggleMostrarClave() {
+  const inp = document.getElementById('ls-key-input');
+  const btn = document.getElementById('ls-toggle-btn');
+  const realKey = inp.getAttribute('data-real-key');
+  if (!realKey) return; // si el usuario está escribiendo, no hacer nada
+  if (inp.getAttribute('data-masked') === 'false') {
+    // Ocultar
+    inp.value = enmascararClave(realKey);
+    inp.setAttribute('data-masked', 'true');
+    btn.textContent = '👁';
+  } else {
+    // Mostrar
+    inp.value = realKey;
+    inp.setAttribute('data-masked', 'false');
+    btn.textContent = '🙈';
+  }
+}
+
+function abrirLicencia() {
+  const popup = document.getElementById('license-popup');
+  const local = cargarLicenciaLocal();
+  if (local?.key) {
+    const inp = document.getElementById('ls-key-input');
+    inp.value = enmascararClave(local.key);
+    inp.setAttribute('data-real-key', local.key);
+    inp.setAttribute('data-masked', 'true');
+  }
+  popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
+}
+
+async function revalidarEnBackground() {
+  const local = cargarLicenciaLocal();
+  if (!local?.key) return;
+  try {
+    const lic = await verificarLicencia(local.key);
+    guardarLicenciaLocal(lic);
+    aplicarEstadoLicencia(lic, false);
+  } catch(e) {
+    if (local) aplicarEstadoLicencia(local, true);
+  }
+}
+
+function iniciarVerificacionPeriodica() {
+  if (licenseTimer) clearInterval(licenseTimer);
+  licenseTimer = setInterval(revalidarEnBackground, LIC_CHECK_INTERVAL);
+}
+
+async function iniciarSistemaLicencias() {
+  const local = cargarLicenciaLocal();
+  if (!local?.key) {
+    // Primera vez — mostrar overlay y popup
+    document.getElementById('license-overlay').style.display = 'block';
+    document.getElementById('license-popup').style.display   = 'block';
+    return;
+  }
+  // Tiene licencia — aplicar estado local inmediatamente
+  aplicarEstadoLicencia(local, false);
+  // Verificar en Supabase y registrar dispositivo si aún no está apuntado
+  try {
+    const lic = await verificarLicencia(local.key);
+    guardarLicenciaLocal(lic);
+    aplicarEstadoLicencia(lic, false);
+    registrarDispositivo(lic); // asegura que este dispositivo quede registrado
+  } catch(e) {
+    document.getElementById('ls-offline-note').style.display = 'block';
+    aplicarEstadoLicencia(local, true);
+  }
+  iniciarVerificacionPeriodica();
+}
+
+window.addEventListener('load', () => {
   if(localStorage.getItem('sb_url') && localStorage.getItem('sb_key')){
     const btn = document.getElementById('supabase-config-btn');
     if(btn) btn.style.display = 'none';
   }
+  iniciarSistemaLicencias();
 });
 </script>
 </body>
