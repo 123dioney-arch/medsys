@@ -9,7 +9,16 @@ jobs:
       contents: write
       id-token: write
       packages: write
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-x86_64
+            bundle: msi
+          - os: macos-latest
+            platform: darwin-x86_64
+            bundle: dmg
+    runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,16 +31,16 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Verificar clave
-        shell: pwsh
+        shell: bash
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
-          if ($env:TAURI_SIGNING_PRIVATE_KEY) {
-            Write-Host "Clave encontrada, longitud: $($env:TAURI_SIGNING_PRIVATE_KEY.Length)"
-          } else {
-            Write-Host "ERROR: Clave no encontrada"
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "Clave encontrada, longitud: ${#TAURI_SIGNING_PRIVATE_KEY}"
+          else
+            echo "ERROR: Clave no encontrada"
             exit 1
-          }
+          fi
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0.5
         env:
@@ -44,32 +53,51 @@ jobs:
           releaseBody: "Nueva versión de MedBC Pro"
           releaseDraft: false
           prerelease: false
-      - name: Find and upload latest.json
-        shell: pwsh
+
+  update-latest-json:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Generate latest.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $version = node -p "require('./src-tauri/tauri.conf.json').version"
-          $sigFile = Get-ChildItem -Path "src-tauri/target/release/bundle" -Recurse -Filter "*.sig" -ErrorAction SilentlyContinue | Select-Object -First 1
-          $signature = ""
-          if ($sigFile) {
-            $signature = Get-Content $sigFile.FullName -Raw
-            Write-Host "Firma encontrada: $($sigFile.FullName)"
-          } else {
-            Write-Host "ERROR: No se encontro archivo .sig"
-            exit 1
-          }
-          $url = "https://github.com/${{ github.repository }}/releases/download/v$version/bc-app_${version}_x64_en-US.msi"
-          $json = @{
-            version = "v$version"
-            notes = "Nueva version de MedBC Pro"
-            pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
-            platforms = @{
-              "windows-x86_64" = @{
-                url = $url
-                signature = $signature.Trim()
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+
+          # Esperar a que los assets estén disponibles
+          sleep 30
+
+          # Descargar firmas
+          WIN_SIG=$(gh release download "v$VERSION" --pattern "*.msi.sig" --output - 2>/dev/null || echo "")
+          MAC_SIG=$(gh release download "v$VERSION" --pattern "*.dmg.sig" --output - 2>/dev/null || echo "")
+
+          WIN_URL="https://github.com/${{ github.repository }}/releases/download/v$VERSION/bc-app_${VERSION}_x64_en-US.msi"
+          MAC_URL="https://github.com/${{ github.repository }}/releases/download/v$VERSION/bc-app_${VERSION}_x64.dmg"
+
+          cat > latest.json << EOF
+          {
+            "version": "v$VERSION",
+            "notes": "Nueva version de MedBC Pro",
+            "pub_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "platforms": {
+              "windows-x86_64": {
+                "url": "$WIN_URL",
+                "signature": "$WIN_SIG"
+              },
+              "darwin-x86_64": {
+                "url": "$MAC_URL",
+                "signature": "$MAC_SIG"
               }
             }
-          } | ConvertTo-Json -Depth 5
-          $json | Out-File -FilePath latest.json -Encoding utf8
-          gh release upload "v$version" latest.json --clobber
+          }
+          EOF
+
+          gh release upload "v$VERSION" latest.json --clobber
